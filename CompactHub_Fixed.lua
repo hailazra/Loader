@@ -34,7 +34,7 @@ local CONFIG = {
     ConfigExtension = ".chub",
     DefaultKeybind = Enum.KeyCode.Insert,
     AnimationSpeed = 0.25,
-    DefaultSize = UDim2.new(0, 400, 0, 600), -- Adjusted to 400x600
+    DefaultSize = UDim2.new(0, 600, 0, 400), -- Adjusted to 400x600
     MinimizedSize = UDim2.new(0, 50, 0, 50),
     TabWidth = 60 -- Width for left-side tabs
 }
