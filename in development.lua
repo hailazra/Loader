@@ -1,5 +1,5 @@
 --[[
-    CompactHub GUI Library v2.0 - Final Release
+    CompactHub GUI Library v2.0 - Fixed Release
     A sleek, mobile-friendly GUI library for Roblox scripts
     
     Features:
@@ -8,7 +8,8 @@
     - Easy loadstring API
     - Smooth animations
     - Multiple themes
-    - Auto-scaling components
+    - Tabs positioned on the right side
+    - Fixed LocalScript compatibility
     
     Usage:
     local CompactHub = loadstring(game:HttpGet("YOUR_URL_HERE"))()
@@ -28,8 +29,8 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 
 -- Library Information
 local CompactHub = {
-    Version = "2.0.0",
-    Build = "CH200",
+    Version = "2.0.1",
+    Build = "CH201",
     Flags = {},
     Connections = {},
     Windows = {}
@@ -42,7 +43,8 @@ local CONFIG = {
     DefaultKeybind = Enum.KeyCode.Insert,
     AnimationSpeed = 0.25,
     DefaultSize = UDim2.new(0, 320, 0, 480), -- Mobile-friendly portrait
-    MinimizedSize = UDim2.new(0, 50, 0, 50)
+    MinimizedSize = UDim2.new(0, 50, 0, 50),
+    TabWidth = 60 -- Width for right-side tabs
 }
 
 -- Themes with sharp, modern colors
@@ -130,15 +132,15 @@ local function AddBorder(element, color, thickness)
 end
 
 local function SaveConfig(windowTitle, config)
-    if not isfolder or not writefile then return end
-    
     local success, err = pcall(function()
-        if not isfolder(CONFIG.FolderName) then
-            makefolder(CONFIG.FolderName)
+        if writefile and makefolder then
+            if not isfolder(CONFIG.FolderName) then
+                makefolder(CONFIG.FolderName)
+            end
+            
+            local configPath = CONFIG.FolderName .. "/" .. windowTitle .. CONFIG.ConfigExtension
+            writefile(configPath, HttpService:JSONEncode(config))
         end
-        
-        local configPath = CONFIG.FolderName .. "/" .. windowTitle .. CONFIG.ConfigExtension
-        writefile(configPath, HttpService:JSONEncode(config))
     end)
     
     if not success then
@@ -147,12 +149,12 @@ local function SaveConfig(windowTitle, config)
 end
 
 local function LoadConfig(windowTitle)
-    if not isfolder or not readfile or not isfile then return {} end
-    
     local success, result = pcall(function()
-        local configPath = CONFIG.FolderName .. "/" .. windowTitle .. CONFIG.ConfigExtension
-        if isfile(configPath) then
-            return HttpService:JSONDecode(readfile(configPath))
+        if readfile and isfile then
+            local configPath = CONFIG.FolderName .. "/" .. windowTitle .. CONFIG.ConfigExtension
+            if isfile(configPath) then
+                return HttpService:JSONDecode(readfile(configPath))
+            end
         end
         return {}
     end)
@@ -194,7 +196,7 @@ function Window:CreateGUI()
     -- Main ScreenGui
     self.ScreenGui = CreateElement("ScreenGui", {
         Name = "CompactHub_" .. self.Title,
-        Parent = CoreGui,
+        Parent = PlayerGui, -- Use PlayerGui instead of CoreGui for better compatibility
         ResetOnSpawn = false,
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     })
@@ -253,12 +255,12 @@ function Window:CreateGUI()
     
     AddBorder(self.MinimizeButton, self.Theme.Border, 1)
     
-    -- Tab Container
+    -- Tab Container (Right side, vertical)
     self.TabContainer = CreateElement("Frame", {
         Name = "TabContainer",
         Parent = self.MainFrame,
-        Size = UDim2.new(1, 0, 0, 30),
-        Position = UDim2.new(0, 0, 0, 35),
+        Size = UDim2.new(0, CONFIG.TabWidth, 1, -35),
+        Position = UDim2.new(1, -CONFIG.TabWidth, 0, 35),
         BackgroundColor3 = self.Theme.Foreground,
         BorderSizePixel = 0
     })
@@ -267,18 +269,18 @@ function Window:CreateGUI()
     
     CreateElement("UIListLayout", {
         Parent = self.TabContainer,
-        FillDirection = Enum.FillDirection.Horizontal,
-        HorizontalAlignment = Enum.HorizontalAlignment.Left,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        Padding = UDim.new(0, 1)
+        FillDirection = Enum.FillDirection.Vertical,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        VerticalAlignment = Enum.VerticalAlignment.Top,
+        Padding = UDim.new(0, 2)
     })
     
-    -- Content Area
+    -- Content Area (Adjusted for right-side tabs)
     self.ContentFrame = CreateElement("ScrollingFrame", {
         Name = "Content",
         Parent = self.MainFrame,
-        Size = UDim2.new(1, 0, 1, -65),
-        Position = UDim2.new(0, 0, 0, 65),
+        Size = UDim2.new(1, -CONFIG.TabWidth, 1, -35),
+        Position = UDim2.new(0, 0, 0, 35),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ScrollBarThickness = 3,
@@ -291,7 +293,7 @@ function Window:CreateGUI()
         FillDirection = Enum.FillDirection.Vertical,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
         VerticalAlignment = Enum.VerticalAlignment.Top,
-        Padding = UDim.new(0, 5)
+        Padding = UDim.new(0, 8)
     })
     
     -- Logo Frame (for minimized state) - Sharp square
@@ -364,31 +366,27 @@ function Window:SetupEvents()
 end
 
 function Window:SetupKeybind()
-    local connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        
+    UserInputService.InputBegan:Connect(function(input)
         if input.KeyCode == self.Keybind then
             self:Toggle()
         end
     end)
-    
-    table.insert(CompactHub.Connections, connection)
 end
 
 function Window:ToggleMinimize()
     self.IsMinimized = not self.IsMinimized
     
     if self.IsMinimized then
-        TweenElement(self.MainFrame, {Size = UDim2.new(0, 0, 0, 0)}, 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.In, function()
+        TweenElement(self.MainFrame, {Size = UDim2.new(0, 0, 0, 0)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In, function()
             self.MainFrame.Visible = false
             self.LogoFrame.Visible = true
             TweenElement(self.LogoFrame, {Size = CONFIG.MinimizedSize}, 0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
         end)
     else
-        TweenElement(self.LogoFrame, {Size = UDim2.new(0, 0, 0, 0)}, 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.In, function()
+        TweenElement(self.LogoFrame, {Size = UDim2.new(0, 0, 0, 0)}, 0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In, function()
             self.LogoFrame.Visible = false
             self.MainFrame.Visible = true
-            TweenElement(self.MainFrame, {Size = self.Size}, 0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+            TweenElement(self.MainFrame, {Size = self.Size}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
         end)
     end
 end
@@ -396,42 +394,73 @@ end
 function Window:Toggle()
     self.IsVisible = not self.IsVisible
     
-    if self.IsMinimized then
-        self.LogoFrame.Visible = self.IsVisible
+    if self.IsVisible then
+        self.ScreenGui.Enabled = true
+        TweenElement(self.MainFrame, {Size = self.Size}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
     else
-        self.MainFrame.Visible = self.IsVisible
+        TweenElement(self.MainFrame, {Size = UDim2.new(0, 0, 0, 0)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In, function()
+            self.ScreenGui.Enabled = false
+        end)
+    end
+end
+
+function Window:SetTheme(themeName)
+    local theme = Themes[themeName]
+    if not theme then return end
+    
+    self.Theme = theme
+    
+    -- Update colors
+    self.MainFrame.BackgroundColor3 = theme.Background
+    self.TitleBar.BackgroundColor3 = theme.Foreground
+    self.TabContainer.BackgroundColor3 = theme.Foreground
+    self.TitleLabel.TextColor3 = theme.Text
+    self.MinimizeButton.BackgroundColor3 = theme.Accent
+    self.LogoFrame.BackgroundColor3 = theme.Accent
+    self.ContentFrame.ScrollBarImageColor3 = theme.Accent
+    
+    -- Update borders
+    for _, element in pairs({self.MainFrame, self.TitleBar, self.TabContainer, self.MinimizeButton, self.LogoFrame}) do
+        local border = element:FindFirstChild("UIStroke")
+        if border then
+            border.Color = theme.Border
+        end
+    end
+    
+    -- Update tab colors
+    for _, tab in pairs(self.Tabs) do
+        tab:UpdateTheme(theme)
     end
 end
 
 function Window:CreateTab(options)
     local tab = {}
-    tab.Name = options.Name or "Tab"
-    tab.Icon = options.Icon or ""
+    tab.Title = options.Title or "Tab"
+    tab.Icon = options.Icon or "T"
     tab.Window = self
     tab.Components = {}
     tab.IsActive = false
     
-    -- Create tab button
+    -- Create Tab Button (Square for sharp design)
     tab.Button = CreateElement("TextButton", {
         Name = "TabButton",
         Parent = self.TabContainer,
-        Size = UDim2.new(0, 80, 1, 0),
-        BackgroundColor3 = self.Theme.Background,
+        Size = UDim2.new(1, -4, 0, 40),
+        BackgroundColor3 = self.Theme.Foreground,
         BorderSizePixel = 0,
-        Text = tab.Icon .. " " .. tab.Name,
+        Text = tab.Icon,
         TextColor3 = self.Theme.TextSecondary,
-        TextSize = 12,
-        Font = Enum.Font.Code,
-        AutoButtonColor = false
+        TextSize = 14,
+        Font = Enum.Font.Code
     })
     
     AddBorder(tab.Button, self.Theme.Border, 1)
     
-    -- Tab content frame
+    -- Create Tab Content
     tab.Content = CreateElement("Frame", {
         Name = "TabContent",
         Parent = self.ContentFrame,
-        Size = UDim2.new(1, -10, 0, 0),
+        Size = UDim2.new(1, -10, 1, 0),
         BackgroundTransparency = 1,
         Visible = false
     })
@@ -444,44 +473,90 @@ function Window:CreateTab(options)
         Padding = UDim.new(0, 5)
     })
     
-    -- Tab button click
+    -- Tab functionality
     tab.Button.MouseButton1Click:Connect(function()
-        self:SelectTab(tab.Name)
+        self:SelectTab(tab)
+    end)
+    
+    -- Hover effects
+    tab.Button.MouseEnter:Connect(function()
+        if not tab.IsActive then
+            TweenElement(tab.Button, {BackgroundColor3 = self.Theme.Accent}, 0.1)
+            TweenElement(tab.Button, {TextColor3 = Color3.fromRGB(0, 0, 0)}, 0.1)
+        end
+    end)
+    
+    tab.Button.MouseLeave:Connect(function()
+        if not tab.IsActive then
+            TweenElement(tab.Button, {BackgroundColor3 = self.Theme.Foreground}, 0.1)
+            TweenElement(tab.Button, {TextColor3 = self.Theme.TextSecondary}, 0.1)
+        end
     end)
     
     -- Tab methods
+    function tab:UpdateTheme(theme)
+        if self.IsActive then
+            self.Button.BackgroundColor3 = theme.Accent
+            self.Button.TextColor3 = Color3.fromRGB(0, 0, 0)
+        else
+            self.Button.BackgroundColor3 = theme.Foreground
+            self.Button.TextColor3 = theme.TextSecondary
+        end
+        
+        local border = self.Button:FindFirstChild("UIStroke")
+        if border then
+            border.Color = theme.Border
+        end
+    end
+    
+    function tab:CreateLabel(options)
+        local label = CreateElement("TextLabel", {
+            Name = "Label",
+            Parent = self.Content,
+            Size = UDim2.new(1, -20, 0, 25),
+            BackgroundTransparency = 1,
+            Text = options.Text or "Label",
+            TextColor3 = self.Window.Theme.Text,
+            TextSize = options.TextSize or 14,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Font = Enum.Font.Code
+        })
+        
+        return label
+    end
+    
     function tab:CreateButton(options)
         local button = CreateElement("TextButton", {
             Name = "Button",
             Parent = self.Content,
-            Size = UDim2.new(1, 0, 0, 35),
+            Size = UDim2.new(1, -20, 0, 35),
             BackgroundColor3 = self.Window.Theme.Accent,
             BorderSizePixel = 0,
             Text = options.Text or "Button",
             TextColor3 = Color3.fromRGB(0, 0, 0),
             TextSize = 14,
-            Font = Enum.Font.Code,
-            AutoButtonColor = false
+            Font = Enum.Font.Code
         })
         
         AddBorder(button, self.Window.Theme.Border, 1)
         
-        button.MouseButton1Click:Connect(function()
-            if options.Callback then
-                options.Callback()
-            end
-        end)
-        
-        -- Hover effect
+        -- Hover effects
         button.MouseEnter:Connect(function()
-            TweenElement(button, {BackgroundTransparency = 0.2}, 0.1)
+            TweenElement(button, {BackgroundColor3 = Color3.fromRGB(
+                math.min(255, self.Window.Theme.Accent.R * 255 + 20),
+                math.min(255, self.Window.Theme.Accent.G * 255 + 20),
+                math.min(255, self.Window.Theme.Accent.B * 255 + 20)
+            )}, 0.1)
         end)
         
         button.MouseLeave:Connect(function()
-            TweenElement(button, {BackgroundTransparency = 0}, 0.1)
+            TweenElement(button, {BackgroundColor3 = self.Window.Theme.Accent}, 0.1)
         end)
         
-        self:UpdateCanvasSize()
+        if options.Callback then
+            button.MouseButton1Click:Connect(options.Callback)
+        end
+        
         return button
     end
     
@@ -489,7 +564,7 @@ function Window:CreateTab(options)
         local container = CreateElement("Frame", {
             Name = "ToggleContainer",
             Parent = self.Content,
-            Size = UDim2.new(1, 0, 0, 35),
+            Size = UDim2.new(1, -20, 0, 35),
             BackgroundColor3 = self.Window.Theme.Foreground,
             BorderSizePixel = 0
         })
@@ -499,12 +574,12 @@ function Window:CreateTab(options)
         local label = CreateElement("TextLabel", {
             Name = "Label",
             Parent = container,
-            Size = UDim2.new(1, -50, 1, 0),
+            Size = UDim2.new(1, -60, 1, 0),
             Position = UDim2.new(0, 10, 0, 0),
             BackgroundTransparency = 1,
             Text = options.Text or "Toggle",
             TextColor3 = self.Window.Theme.Text,
-            TextSize = 12,
+            TextSize = 14,
             TextXAlignment = Enum.TextXAlignment.Left,
             Font = Enum.Font.Code
         })
@@ -512,106 +587,21 @@ function Window:CreateTab(options)
         local toggle = CreateElement("TextButton", {
             Name = "Toggle",
             Parent = container,
-            Size = UDim2.new(0, 30, 0, 15),
-            Position = UDim2.new(1, -35, 0.5, -7.5),
+            Size = UDim2.new(0, 40, 0, 20),
+            Position = UDim2.new(1, -45, 0.5, -10),
             BackgroundColor3 = options.Default and self.Window.Theme.Accent or self.Window.Theme.Background,
             BorderSizePixel = 0,
             Text = options.Default and "ON" or "OFF",
             TextColor3 = options.Default and Color3.fromRGB(0, 0, 0) or self.Window.Theme.Text,
-            TextSize = 10,
-            Font = Enum.Font.Code,
-            AutoButtonColor = false
+            TextSize = 12,
+            Font = Enum.Font.Code
         })
         
         AddBorder(toggle, self.Window.Theme.Border, 1)
         
-        local value = options.Default or false
+        local isToggled = options.Default or false
+        self.Window.Flags[options.Flag or options.Text] = isToggled
         
         toggle.MouseButton1Click:Connect(function()
-            value = not value
-            toggle.Text = value and "ON" or "OFF"
-            toggle.BackgroundColor3 = value and self.Window.Theme.Accent or self.Window.Theme.Background
-            toggle.TextColor3 = value and Color3.fromRGB(0, 0, 0) or self.Window.Theme.Text
-            
-            if options.Flag then
-                self.Window.Flags[options.Flag] = value
-            end
-            
-            if options.Callback then
-                options.Callback(value)
-            end
-        end)
-        
-        self:UpdateCanvasSize()
-        return {Container = container, Toggle = toggle, GetValue = function() return value end}
-    end
-    
-    function tab:CreateSlider(options)
-        local container = CreateElement("Frame", {
-            Name = "SliderContainer",
-            Parent = self.Content,
-            Size = UDim2.new(1, 0, 0, 50),
-            BackgroundColor3 = self.Window.Theme.Foreground,
-            BorderSizePixel = 0
-        })
-        
-        AddBorder(container, self.Window.Theme.Border, 1)
-        
-        local label = CreateElement("TextLabel", {
-            Name = "Label",
-            Parent = container,
-            Size = UDim2.new(1, -60, 0, 20),
-            Position = UDim2.new(0, 10, 0, 5),
-            BackgroundTransparency = 1,
-            Text = options.Text or "Slider",
-            TextColor3 = self.Window.Theme.Text,
-            TextSize = 12,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            Font = Enum.Font.Code
-        })
-        
-        local valueLabel = CreateElement("TextLabel", {
-            Name = "ValueLabel",
-            Parent = container,
-            Size = UDim2.new(0, 50, 0, 20),
-            Position = UDim2.new(1, -55, 0, 5),
-            BackgroundTransparency = 1,
-            Text = tostring(options.Default or options.Min or 0),
-            TextColor3 = self.Window.Theme.Accent,
-            TextSize = 12,
-            TextXAlignment = Enum.TextXAlignment.Right,
-            Font = Enum.Font.Code
-        })
-        
-        local track = CreateElement("Frame", {
-            Name = "Track",
-            Parent = container,
-            Size = UDim2.new(1, -20, 0, 3),
-            Position = UDim2.new(0, 10, 1, -15),
-            BackgroundColor3 = self.Window.Theme.Background,
-            BorderSizePixel = 0
-        })
-        
-        AddBorder(track, self.Window.Theme.Border, 1)
-        
-        local fill = CreateElement("Frame", {
-            Name = "Fill",
-            Parent = track,
-            Size = UDim2.new(0, 0, 1, 0),
-            BackgroundColor3 = self.Window.Theme.Accent,
-            BorderSizePixel = 0
-        })
-        
-        local min = options.Min or 0
-        local max = options.Max or 100
-        local value = options.Default or min
-        local dragging = false
-        
-        local function updateSlider()
-            local percentage = (value - min) / (max - min)
-            fill.Size = UDim2.new(percentage, 0, 1, 0)
-            valueLabel.Text = tostring(value)
-        end
-        
-        track.InputBegan:Connect(function(input)
-            if input.Us
+            isToggled = not isToggled
+            self.Window.Flags[options.Flag or options.Text] = isT
