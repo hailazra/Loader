@@ -1,18 +1,10 @@
 --[[
-    CompactHub GUI Library v2.0 - Fixed Release
-    A sleek, mobile-friendly GUI library for Roblox scripts
-    
-    Features:
-    - Sharp angular design (no rounded corners)
-    - Mobile-optimized portrait layout (320x480)
-    - Easy loadstring API
-    - Smooth animations
-    - Multiple themes
-    - Tabs positioned on the right side
-    - Fixed LocalScript compatibility
-    
-    Usage:
-    local CompactHub = loadstring(game:HttpGet("YOUR_URL_HERE"))()
+    CompactHub GUI Library v2.0 - Fixed Release (Modified)
+    Changes:
+    - Tab position moved from right to left
+    - UI size adjusted to 400x600
+    - Improved theme consistency
+    - Enhanced UI layout
 ]]
 
 -- Services
@@ -42,9 +34,9 @@ local CONFIG = {
     ConfigExtension = ".chub",
     DefaultKeybind = Enum.KeyCode.Insert,
     AnimationSpeed = 0.25,
-    DefaultSize = UDim2.new(0, 320, 0, 480), -- Mobile-friendly portrait
+    DefaultSize = UDim2.new(0, 400, 0, 600), -- Adjusted to 400x600
     MinimizedSize = UDim2.new(0, 50, 0, 50),
-    TabWidth = 60 -- Width for right-side tabs
+    TabWidth = 60 -- Width for left-side tabs
 }
 
 -- Themes with sharp, modern colors
@@ -196,7 +188,7 @@ function Window:CreateGUI()
     -- Main ScreenGui
     self.ScreenGui = CreateElement("ScreenGui", {
         Name = "CompactHub_" .. self.Title,
-        Parent = PlayerGui, -- Use PlayerGui instead of CoreGui for better compatibility
+        Parent = PlayerGui,
         ResetOnSpawn = false,
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     })
@@ -255,12 +247,12 @@ function Window:CreateGUI()
     
     AddBorder(self.MinimizeButton, self.Theme.Border, 1)
     
-    -- Tab Container (Right side, vertical)
+    -- Tab Container (LEFT side, vertical)
     self.TabContainer = CreateElement("Frame", {
         Name = "TabContainer",
         Parent = self.MainFrame,
         Size = UDim2.new(0, CONFIG.TabWidth, 1, -35),
-        Position = UDim2.new(1, -CONFIG.TabWidth, 0, 35),
+        Position = UDim2.new(0, 0, 0, 35), -- Changed to left side
         BackgroundColor3 = self.Theme.Foreground,
         BorderSizePixel = 0
     })
@@ -275,17 +267,18 @@ function Window:CreateGUI()
         Padding = UDim.new(0, 2)
     })
     
-    -- Content Area (Adjusted for right-side tabs)
+    -- Content Area (Adjusted for LEFT-side tabs)
     self.ContentFrame = CreateElement("ScrollingFrame", {
         Name = "Content",
         Parent = self.MainFrame,
         Size = UDim2.new(1, -CONFIG.TabWidth, 1, -35),
-        Position = UDim2.new(0, 0, 0, 35),
+        Position = UDim2.new(0, CONFIG.TabWidth, 0, 35), -- Position adjusted for left tabs
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ScrollBarThickness = 3,
         ScrollBarImageColor3 = self.Theme.Accent,
-        CanvasSize = UDim2.new(0, 0, 0, 0)
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y
     })
     
     CreateElement("UIListLayout", {
@@ -294,6 +287,15 @@ function Window:CreateGUI()
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
         VerticalAlignment = Enum.VerticalAlignment.Top,
         Padding = UDim.new(0, 8)
+    })
+    
+    -- Add padding to content
+    CreateElement("UIPadding", {
+        Parent = self.ContentFrame,
+        PaddingLeft = UDim.new(0, 5),
+        PaddingRight = UDim.new(0, 5),
+        PaddingTop = UDim.new(0, 5),
+        PaddingBottom = UDim.new(0, 5)
     })
     
     -- Logo Frame (for minimized state) - Sharp square
@@ -431,6 +433,15 @@ function Window:SetTheme(themeName)
     for _, tab in pairs(self.Tabs) do
         tab:UpdateTheme(theme)
     end
+    
+    -- Update content elements
+    for _, tab in pairs(self.Tabs) do
+        for _, component in pairs(tab.Components) do
+            if component.UpdateTheme then
+                component:UpdateTheme(theme)
+            end
+        end
+    end
 end
 
 function Window:CreateTab(options)
@@ -460,7 +471,7 @@ function Window:CreateTab(options)
     tab.Content = CreateElement("Frame", {
         Name = "TabContent",
         Parent = self.ContentFrame,
-        Size = UDim2.new(1, -10, 1, 0),
+        Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         Visible = false
     })
@@ -470,7 +481,16 @@ function Window:CreateTab(options)
         FillDirection = Enum.FillDirection.Vertical,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
         VerticalAlignment = Enum.VerticalAlignment.Top,
-        Padding = UDim.new(0, 5)
+        Padding = UDim.new(0, 8)
+    })
+    
+    -- Add padding to tab content
+    CreateElement("UIPadding", {
+        Parent = tab.Content,
+        PaddingLeft = UDim.new(0, 5),
+        PaddingRight = UDim.new(0, 5),
+        PaddingTop = UDim.new(0, 5),
+        PaddingBottom = UDim.new(0, 5)
     })
     
     -- Tab functionality
@@ -513,15 +533,20 @@ function Window:CreateTab(options)
         local label = CreateElement("TextLabel", {
             Name = "Label",
             Parent = self.Content,
-            Size = UDim2.new(1, -20, 0, 25),
+            Size = UDim2.new(1, -10, 0, 25),
             BackgroundTransparency = 1,
             Text = options.Text or "Label",
             TextColor3 = self.Window.Theme.Text,
             TextSize = options.TextSize or 14,
-            TextXAlignment = Enum.TextXAlignment.Left,
+            TextXAlignment = options.TextXAlignment or Enum.TextXAlignment.Left,
             Font = Enum.Font.Code
         })
         
+        function label.UpdateTheme(theme)
+            label.TextColor3 = theme.Text
+        end
+        
+        table.insert(self.Components, label)
         return label
     end
     
@@ -529,7 +554,7 @@ function Window:CreateTab(options)
         local button = CreateElement("TextButton", {
             Name = "Button",
             Parent = self.Content,
-            Size = UDim2.new(1, -20, 0, 35),
+            Size = UDim2.new(1, -10, 0, 35),
             BackgroundColor3 = self.Window.Theme.Accent,
             BorderSizePixel = 0,
             Text = options.Text or "Button",
@@ -557,6 +582,15 @@ function Window:CreateTab(options)
             button.MouseButton1Click:Connect(options.Callback)
         end
         
+        function button.UpdateTheme(theme)
+            button.BackgroundColor3 = theme.Accent
+            local border = button:FindFirstChild("UIStroke")
+            if border then
+                border.Color = theme.Border
+            end
+        end
+        
+        table.insert(self.Components, button)
         return button
     end
     
@@ -564,7 +598,7 @@ function Window:CreateTab(options)
         local container = CreateElement("Frame", {
             Name = "ToggleContainer",
             Parent = self.Content,
-            Size = UDim2.new(1, -20, 0, 35),
+            Size = UDim2.new(1, -10, 0, 35),
             BackgroundColor3 = self.Window.Theme.Foreground,
             BorderSizePixel = 0
         })
@@ -621,6 +655,29 @@ function Window:CreateTab(options)
             end
         end)
         
+        function container.UpdateTheme(theme)
+            container.BackgroundColor3 = theme.Foreground
+            label.TextColor3 = theme.Text
+            local border = container:FindFirstChild("UIStroke")
+            if border then
+                border.Color = theme.Border
+            end
+            
+            if isToggled then
+                toggle.BackgroundColor3 = theme.Accent
+                toggle.TextColor3 = Color3.fromRGB(0, 0, 0)
+            else
+                toggle.BackgroundColor3 = theme.Background
+                toggle.TextColor3 = theme.Text
+            end
+            
+            local toggleBorder = toggle:FindFirstChild("UIStroke")
+            if toggleBorder then
+                toggleBorder.Color = theme.Border
+            end
+        end
+        
+        table.insert(self.Components, container)
         return container
     end
     
@@ -628,7 +685,7 @@ function Window:CreateTab(options)
         local container = CreateElement("Frame", {
             Name = "SliderContainer",
             Parent = self.Content,
-            Size = UDim2.new(1, -20, 0, 50),
+            Size = UDim2.new(1, -10, 0, 60),
             BackgroundColor3 = self.Window.Theme.Foreground,
             BorderSizePixel = 0
         })
@@ -665,7 +722,7 @@ function Window:CreateTab(options)
             Name = "SliderFrame",
             Parent = container,
             Size = UDim2.new(1, -20, 0, 6),
-            Position = UDim2.new(0, 10, 1, -15),
+            Position = UDim2.new(0, 10, 1, -20),
             BackgroundColor3 = self.Window.Theme.Background,
             BorderSizePixel = 0
         })
@@ -724,6 +781,30 @@ function Window:CreateTab(options)
         
         updateSlider(current)
         
+        function container.UpdateTheme(theme)
+            container.BackgroundColor3 = theme.Foreground
+            label.TextColor3 = theme.Text
+            valueLabel.TextColor3 = theme.Accent
+            sliderFrame.BackgroundColor3 = theme.Background
+            sliderButton.BackgroundColor3 = theme.Accent
+            
+            local border = container:FindFirstChild("UIStroke")
+            if border then
+                border.Color = theme.Border
+            end
+            
+            local sliderFrameBorder = sliderFrame:FindFirstChild("UIStroke")
+            if sliderFrameBorder then
+                sliderFrameBorder.Color = theme.Border
+            end
+            
+            local sliderButtonBorder = sliderButton:FindFirstChild("UIStroke")
+            if sliderButtonBorder then
+                sliderButtonBorder.Color = theme.Border
+            end
+        end
+        
+        table.insert(self.Components, container)
         return container
     end
     
@@ -731,7 +812,7 @@ function Window:CreateTab(options)
         local container = CreateElement("Frame", {
             Name = "InputContainer",
             Parent = self.Content,
-            Size = UDim2.new(1, -20, 0, 50),
+            Size = UDim2.new(1, -10, 0, 60),
             BackgroundColor3 = self.Window.Theme.Foreground,
             BorderSizePixel = 0
         })
@@ -754,8 +835,8 @@ function Window:CreateTab(options)
         local textBox = CreateElement("TextBox", {
             Name = "TextBox",
             Parent = container,
-            Size = UDim2.new(1, -20, 0, 20),
-            Position = UDim2.new(0, 10, 1, -25),
+            Size = UDim2.new(1, -20, 0, 25),
+            Position = UDim2.new(0, 10, 1, -30),
             BackgroundColor3 = self.Window.Theme.Background,
             BorderSizePixel = 0,
             Text = options.Default or "",
@@ -778,6 +859,25 @@ function Window:CreateTab(options)
             end
         end)
         
+        function container.UpdateTheme(theme)
+            container.BackgroundColor3 = theme.Foreground
+            label.TextColor3 = theme.Text
+            textBox.BackgroundColor3 = theme.Background
+            textBox.TextColor3 = theme.Text
+            textBox.PlaceholderColor3 = theme.TextSecondary
+            
+            local border = container:FindFirstChild("UIStroke")
+            if border then
+                border.Color = theme.Border
+            end
+            
+            local textBoxBorder = textBox:FindFirstChild("UIStroke")
+            if textBoxBorder then
+                textBoxBorder.Color = theme.Border
+            end
+        end
+        
+        table.insert(self.Components, container)
         return container
     end
     
