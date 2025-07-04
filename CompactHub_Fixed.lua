@@ -862,17 +862,5 @@ function CompactHub:Destroy()
     self.Connections = {}
 end
 
--- Wrap as function so LocalScript can pass context
-return function(player, playerGui)
-    local Players = game:GetService("Players")
-    
-    -- Use passed-in player or fallback
-    player = player or Players.LocalPlayer
-    playerGui = playerGui or player:WaitForChild("PlayerGui")
-    
-    -- Inject into existing vars
-    Player = player
-    PlayerGui = playerGui
-
-    return CompactHub
-end
+-- Return the library
+return CompactHub
