@@ -9,7 +9,7 @@
 ]]
 
 -- Load AstroHubV3 Library
-local AstroHubV3 = loadstring(game:HttpGet("https://raw.githubusercontent.com/yourusername/AstroHubV3/main/AstroHubV3.lua"))()
+local AstroHubV3 = loadstring(game:HttpGet("https://raw.githubusercontent.com/hailazra/Loader/refs/heads/main/AstroHubV3.lua"))()
 
 -- Buat Window
 local Window = AstroHubV3:CreateWindow({
