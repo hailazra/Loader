@@ -1,0 +1,2639 @@
+-- AstroHubV2 GUI Library for Roblox
+-- A modern, feature-rich GUI library with Manga and Space themes
+-- Designed for loadstring compatibility
+
+local AstroHubV2 = {}
+
+-- Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
+local Debris = game:GetService("Debris")
+
+-- Local player reference
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Main window properties
+local MainWindow = nil
+local MainFrame = nil
+local isMinimized = false
+local originalSize = nil
+local originalPosition = nil
+local currentTheme = nil
+
+-- Theme system
+local themes = {
+    Manga = {
+        MainBackground = Color3.fromRGB(255, 255, 255),
+        MainBackgroundTransparency = 0,
+        TitleBar = Color3.fromRGB(240, 240, 240),
+        TabContainer = Color3.fromRGB(245, 245, 245),
+        TabContent = Color3.fromRGB(250, 250, 250),
+        SectionBackground = Color3.fromRGB(255, 255, 255),
+        ElementBackground = Color3.fromRGB(245, 245, 245),
+        TextColor = Color3.fromRGB(20, 20, 20),
+        AccentColor = Color3.fromRGB(0, 0, 0),
+        ToggleOn = Color3.fromRGB(0, 0, 0),
+        ToggleOff = Color3.fromRGB(200, 200, 200),
+        Divider = Color3.fromRGB(230, 230, 230),
+        ButtonHover = Color3.fromRGB(235, 235, 235),
+        SliderFill = Color3.fromRGB(0, 0, 0),
+        InputBackground = Color3.fromRGB(240, 240, 240),
+        NotificationBg = Color3.fromRGB(255, 255, 255),
+        Shadow = Color3.fromRGB(0, 0, 0)
+    },
+    Space = {
+        MainBackground = Color3.fromRGB(10, 15, 30),
+        MainBackgroundTransparency = 0.1,
+        TitleBar = Color3.fromRGB(15, 20, 40),
+        TabContainer = Color3.fromRGB(12, 18, 35),
+        TabContent = Color3.fromRGB(8, 12, 25),
+        SectionBackground = Color3.fromRGB(15, 25, 45),
+        ElementBackground = Color3.fromRGB(20, 30, 50),
+        TextColor = Color3.fromRGB(200, 220, 255),
+        AccentColor = Color3.fromRGB(100, 150, 255),
+        ToggleOn = Color3.fromRGB(100, 150, 255),
+        ToggleOff = Color3.fromRGB(60, 70, 90),
+        Divider = Color3.fromRGB(40, 50, 70),
+        ButtonHover = Color3.fromRGB(30, 40, 60),
+        SliderFill = Color3.fromRGB(100, 150, 255),
+        InputBackground = Color3.fromRGB(25, 35, 55),
+        NotificationBg = Color3.fromRGB(15, 20, 40),
+        Shadow = Color3.fromRGB(0, 0, 20)
+    }
+}
+
+-- Set default theme
+currentTheme = themes.Manga
+
+-- Tab management
+local Tabs = {}
+local TabContainer = nil
+local TabContentContainer = nil
+local activeTab = nil
+
+-- Notification system
+local notificationQueue = {}
+local maxNotifications = 5
+
+-- Flag system
+local flags = {}
+
+-- Callback system
+local callbacks = {}
+
+-- Hotkey system
+local currentHotkey = nil
+local hotkeyConnection = nil
+
+-- Blur effect
+local blurEffect = nil
+
+-- Minimize icon
+local minimizeIcon = nil
+
+-- Logo
+local logoAssetId = "rbxassetid://13185957571" -- Default AstroHub logo
+
+-- Loading overlay
+local loadingOverlay = nil
+
+-- Debug console
+local debugLogs = {}
+local debugConsole = nil
+
+-- Search functionality
+local searchBar = nil
+local searchQuery = ""
+
+-- Utility functions
+local function createUICorner(parent, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius or 8)
+    corner.Parent = parent
+    return corner
+end
+
+local function createUIStroke(parent, thickness, color, transparency)
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = thickness or 1
+    stroke.Color = color or currentTheme.Divider
+    stroke.Transparency = transparency or 0
+    stroke.Parent = parent
+    return stroke
+end
+
+local function createUIListLayout(parent, direction, alignment, padding)
+    local layout = Instance.new("UIListLayout")
+    layout.FillDirection = direction or Enum.FillDirection.Vertical
+    layout.HorizontalAlignment = alignment or Enum.HorizontalAlignment.Center
+    layout.VerticalAlignment = Enum.VerticalAlignment.Top
+    layout.Padding = UDim.new(0, padding or 5)
+    layout.Parent = parent
+    return layout
+end
+
+local function createUIPadding(parent, padding)
+    local UIPadding = Instance.new("UIPadding")
+    if type(padding) == "table" then
+        UIPadding.PaddingTop = UDim.new(0, padding.top or 0)
+        UIPadding.PaddingBottom = UDim.new(0, padding.bottom or 0)
+        UIPadding.PaddingLeft = UDim.new(0, padding.left or 0)
+        UIPadding.PaddingRight = UDim.new(0, padding.right or 0)
+    else
+        local p = padding or 10
+        UIPadding.PaddingTop = UDim.new(0, p)
+        UIPadding.PaddingBottom = UDim.new(0, p)
+        UIPadding.PaddingLeft = UDim.new(0, p)
+        UIPadding.PaddingRight = UDim.new(0, p)
+    end
+    UIPadding.Parent = parent
+    return UIPadding
+end
+
+local function createShadow(parent, offset, transparency)
+    local shadow = Instance.new("Frame")
+    shadow.Name = "Shadow"
+    shadow.Size = UDim2.new(1, offset or 10, 1, offset or 10)
+    shadow.Position = UDim2.new(0, -(offset or 10)/2, 0, -(offset or 10)/2)
+    shadow.BackgroundColor3 = currentTheme.Shadow
+    shadow.BackgroundTransparency = transparency or 0.8
+    shadow.BorderSizePixel = 0
+    shadow.ZIndex = parent.ZIndex - 1
+    shadow.Parent = parent.Parent
+    
+    createUICorner(shadow, 12)
+    
+    -- Move shadow behind parent
+    shadow.Parent = parent.Parent
+    parent.Parent = shadow.Parent
+    
+    return shadow
+end
+
+local function animateHover(element, hoverColor, originalColor)
+    element.MouseEnter:Connect(function()
+        TweenService:Create(element, TweenInfo.new(0.2), {BackgroundColor3 = hoverColor}):Play()
+    end)
+    
+    element.MouseLeave:Connect(function()
+        TweenService:Create(element, TweenInfo.new(0.2), {BackgroundColor3 = originalColor}):Play()
+    end)
+end
+
+local function debugLog(message)
+    table.insert(debugLogs, {
+        time = os.date("%H:%M:%S"),
+        message = message
+    })
+    
+    if debugConsole then
+        -- Update debug console if it exists
+        AstroHubV2:UpdateDebugConsole()
+    end
+end
+
+-- Theme functions
+function AstroHubV2:SetTheme(themeName)
+    if themes[themeName] then
+        currentTheme = themes[themeName]
+        debugLog("Theme changed to: " .. themeName)
+        if MainWindow then
+            self:RefreshTheme()
+        end
+    else
+        warn("AstroHubV2: Theme '" .. themeName .. "' not found.")
+    end
+end
+
+function AstroHubV2:RefreshTheme()
+    if not MainWindow then return end
+    
+    -- Update main frame
+    if MainFrame then
+        MainFrame.BackgroundColor3 = currentTheme.MainBackground
+        MainFrame.BackgroundTransparency = currentTheme.MainBackgroundTransparency
+    end
+    
+    -- Update title bar
+    local titleBar = MainFrame:FindFirstChild("TitleBar")
+    if titleBar then
+        titleBar.BackgroundColor3 = currentTheme.TitleBar
+        local titleLabel = titleBar:FindFirstChild("TitleLabel")
+        if titleLabel then
+            titleLabel.TextColor3 = currentTheme.TextColor
+        end
+    end
+    
+    -- Update tab container
+    if TabContainer then
+        TabContainer.BackgroundColor3 = currentTheme.TabContainer
+    end
+    
+    -- Update tab content
+    if TabContentContainer then
+        TabContentContainer.BackgroundColor3 = currentTheme.TabContent
+    end
+    
+    -- Update all tabs
+    for _, tab in pairs(Tabs) do
+        if tab.Button then
+            tab.Button.TextColor3 = currentTheme.TextColor
+            if tab.Button.BackgroundTransparency ~= 1 then
+                tab.Button.BackgroundColor3 = tab == activeTab and currentTheme.AccentColor or currentTheme.ElementBackground
+            end
+        end
+    end
+end
+
+-- Window creation
+function AstroHubV2:CreateWindow(title, sizeX, sizeY, posX, posY, logo)
+    if MainWindow then
+        warn("AstroHubV2: Window already created. Destroy it first to create a new one.")
+        return MainFrame
+    end
+    
+    debugLog("Creating window: " .. title)
+    
+    -- Set custom logo if provided
+    if logo then
+        logoAssetId = logo
+    end
+
+    -- Create ScreenGui
+    MainWindow = Instance.new("ScreenGui")
+    MainWindow.Name = "AstroHubV2_MainWindow"
+    MainWindow.DisplayOrder = 999
+    MainWindow.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    MainWindow.ResetOnSpawn = false
+    MainWindow.Parent = CoreGui
+
+    -- Create main frame
+    MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, sizeX or 500, 0, sizeY or 250)
+    MainFrame.Position = UDim2.new(0, posX or 100, 0, posY or 100)
+    MainFrame.BackgroundColor3 = currentTheme.MainBackground
+    MainFrame.BackgroundTransparency = currentTheme.MainBackgroundTransparency
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Parent = MainWindow
+
+    createUICorner(MainFrame, 10)
+    
+    -- Add shadow effect
+    if currentTheme == themes.Space then
+        createShadow(MainFrame, 20, 0.5)
+    else
+        createUIStroke(MainFrame, 1, currentTheme.Divider, 0.5)
+    end
+
+    -- Store original size and position
+    originalSize = MainFrame.Size
+    originalPosition = MainFrame.Position
+
+    -- Title Bar
+    local titleBar = Instance.new("Frame")
+    titleBar.Name = "TitleBar"
+    titleBar.Size = UDim2.new(1, 0, 0, 35)
+    titleBar.Position = UDim2.new(0, 0, 0, 0)
+    titleBar.BackgroundColor3 = currentTheme.TitleBar
+    titleBar.BorderSizePixel = 0
+    titleBar.Parent = MainFrame
+
+    createUICorner(titleBar, 10)
+
+    -- Logo
+    local logoImage = Instance.new("ImageLabel")
+    logoImage.Name = "LogoImage"
+    logoImage.Size = UDim2.new(0, 25, 0, 25)
+    logoImage.Position = UDim2.new(0, 10, 0, 5)
+    logoImage.BackgroundTransparency = 1
+    logoImage.Image = logoAssetId
+    logoImage.ImageColor3 = currentTheme.TextColor
+    logoImage.Parent = titleBar
+
+    -- Title Label
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "TitleLabel"
+    titleLabel.Size = UDim2.new(1, -150, 1, 0)
+    titleLabel.Position = UDim2.new(0, 40, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title or "AstroHubV2"
+    titleLabel.TextColor3 = currentTheme.TextColor
+    titleLabel.Font = Enum.Font.Gotham
+    titleLabel.TextSize = 16
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = titleBar
+
+    -- Window controls container
+    local controlsContainer = Instance.new("Frame")
+    controlsContainer.Name = "ControlsContainer"
+    controlsContainer.Size = UDim2.new(0, 90, 1, 0)
+    controlsContainer.Position = UDim2.new(1, -90, 0, 0)
+    controlsContainer.BackgroundTransparency = 1
+    controlsContainer.Parent = titleBar
+
+    -- Minimize Button
+    local minimizeButton = Instance.new("TextButton")
+    minimizeButton.Name = "MinimizeButton"
+    minimizeButton.Size = UDim2.new(0, 25, 0, 25)
+    minimizeButton.Position = UDim2.new(0, 5, 0.5, -12.5)
+    minimizeButton.BackgroundColor3 = currentTheme.ElementBackground
+    minimizeButton.Text = "—"
+    minimizeButton.TextColor3 = currentTheme.TextColor
+    minimizeButton.Font = Enum.Font.Gotham
+    minimizeButton.TextSize = 14
+    minimizeButton.BorderSizePixel = 0
+    minimizeButton.Parent = controlsContainer
+
+    createUICorner(minimizeButton, 5)
+    animateHover(minimizeButton, currentTheme.ButtonHover, currentTheme.ElementBackground)
+
+    minimizeButton.MouseButton1Click:Connect(function()
+        self:MinimizeGUI()
+    end)
+
+    -- Fullscreen Button
+    local fullscreenButton = Instance.new("TextButton")
+    fullscreenButton.Name = "FullscreenButton"
+    fullscreenButton.Size = UDim2.new(0, 25, 0, 25)
+    fullscreenButton.Position = UDim2.new(0, 32, 0.5, -12.5)
+    fullscreenButton.BackgroundColor3 = currentTheme.ElementBackground
+    fullscreenButton.Text = "□"
+    fullscreenButton.TextColor3 = currentTheme.TextColor
+    fullscreenButton.Font = Enum.Font.Gotham
+    fullscreenButton.TextSize = 14
+    fullscreenButton.BorderSizePixel = 0
+    fullscreenButton.Parent = controlsContainer
+
+    createUICorner(fullscreenButton, 5)
+    animateHover(fullscreenButton, currentTheme.ButtonHover, currentTheme.ElementBackground)
+
+    local isFullscreen = false
+    fullscreenButton.MouseButton1Click:Connect(function()
+        if isFullscreen then
+            MainFrame.Size = originalSize
+            MainFrame.Position = originalPosition
+            isFullscreen = false
+            fullscreenButton.Text = "□"
+        else
+            originalSize = MainFrame.Size
+            originalPosition = MainFrame.Position
+            MainFrame.Size = UDim2.new(0.9, 0, 0.9, 0)
+            MainFrame.Position = UDim2.new(0.05, 0, 0.05, 0)
+            isFullscreen = true
+            fullscreenButton.Text = "◱"
+        end
+    end)
+
+    -- Close Button
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Size = UDim2.new(0, 25, 0, 25)
+    closeButton.Position = UDim2.new(0, 59, 0.5, -12.5)
+    closeButton.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+    closeButton.Text = "×"
+    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeButton.Font = Enum.Font.Gotham
+    closeButton.TextSize = 18
+    closeButton.BorderSizePixel = 0
+    closeButton.Parent = controlsContainer
+
+    createUICorner(closeButton, 5)
+    animateHover(closeButton, Color3.fromRGB(255, 50, 50), Color3.fromRGB(255, 70, 70))
+
+    closeButton.MouseButton1Click:Connect(function()
+        self:DestroyGUI()
+    end)
+
+    -- Draggable functionality
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
+
+    local function updateDrag(input)
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
+    titleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+        end
+    end)
+
+    titleBar.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateDrag(input)
+        end
+    end)
+
+    titleBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    -- Resize handle
+    local resizeHandle = Instance.new("TextButton")
+    resizeHandle.Name = "ResizeHandle"
+    resizeHandle.Size = UDim2.new(0, 20, 0, 20)
+    resizeHandle.Position = UDim2.new(1, -20, 1, -20)
+    resizeHandle.BackgroundColor3 = currentTheme.AccentColor
+    resizeHandle.Text = "◢"
+    resizeHandle.TextColor3 = currentTheme == themes.Manga and Color3.fromRGB(255, 255, 255) or currentTheme.TextColor
+    resizeHandle.Font = Enum.Font.Gotham
+    resizeHandle.TextSize = 12
+    resizeHandle.BorderSizePixel = 0
+    resizeHandle.Parent = MainFrame
+
+    createUICorner(resizeHandle, 5)
+    resizeHandle.BackgroundTransparency = 0.5
+
+    local resizing = false
+    local resizeStart = nil
+    local startSize = nil
+
+    local function updateResize(input)
+        local delta = input.Position - resizeStart
+        local newSize = UDim2.new(0, math.max(400, startSize.X.Offset + delta.X), 0, math.max(200, startSize.Y.Offset + delta.Y))
+        MainFrame.Size = newSize
+    end
+
+    resizeHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            resizing = true
+            resizeStart = input.Position
+            startSize = MainFrame.Size
+        end
+    end)
+
+    resizeHandle.InputChanged:Connect(function(input)
+        if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateResize(input)
+        end
+    end)
+
+    resizeHandle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            resizing = false
+        end
+    end)
+
+    -- Fade in animation
+    MainFrame.BackgroundTransparency = 1
+    titleBar.BackgroundTransparency = 1
+    titleLabel.TextTransparency = 1
+    logoImage.ImageTransparency = 1
+    minimizeButton.BackgroundTransparency = 1
+    minimizeButton.TextTransparency = 1
+    fullscreenButton.BackgroundTransparency = 1
+    fullscreenButton.TextTransparency = 1
+    closeButton.BackgroundTransparency = 1
+    closeButton.TextTransparency = 1
+    resizeHandle.BackgroundTransparency = 1
+    resizeHandle.TextTransparency = 1
+
+    local fadeInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    
+    TweenService:Create(MainFrame, fadeInInfo, {BackgroundTransparency = currentTheme.MainBackgroundTransparency}):Play()
+    TweenService:Create(titleBar, fadeInInfo, {BackgroundTransparency = 0}):Play()
+    TweenService:Create(titleLabel, fadeInInfo, {TextTransparency = 0}):Play()
+    TweenService:Create(logoImage, fadeInInfo, {ImageTransparency = 0}):Play()
+    TweenService:Create(minimizeButton, fadeInInfo, {BackgroundTransparency = 0, TextTransparency = 0}):Play()
+    TweenService:Create(fullscreenButton, fadeInInfo, {BackgroundTransparency = 0, TextTransparency = 0}):Play()
+    TweenService:Create(closeButton, fadeInInfo, {BackgroundTransparency = 0, TextTransparency = 0}):Play()
+    TweenService:Create(resizeHandle, fadeInInfo, {BackgroundTransparency = 0.5, TextTransparency = 0}):Play()
+
+    return MainFrame
+end
+
+-- Tab creation
+function AstroHubV2:CreateTab(tabName, icon)
+    if not MainWindow then
+        warn("AstroHubV2: CreateTab requires a window to be created first.")
+        return nil
+    end
+
+    debugLog("Creating tab: " .. tabName)
+
+    if not TabContainer then
+        -- Create tab container
+        TabContainer = Instance.new("ScrollingFrame")
+        TabContainer.Name = "TabContainer"
+        TabContainer.Size = UDim2.new(0, 140, 1, -45)
+        TabContainer.Position = UDim2.new(0, 5, 0, 40)
+        TabContainer.BackgroundColor3 = currentTheme.TabContainer
+        TabContainer.BorderSizePixel = 0
+        TabContainer.ScrollBarThickness = 4
+        TabContainer.ScrollBarImageColor3 = currentTheme.AccentColor
+        TabContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+        TabContainer.Parent = MainFrame
+
+        createUICorner(TabContainer, 8)
+        createUIListLayout(TabContainer, Enum.FillDirection.Vertical, Enum.HorizontalAlignment.Center, 5)
+        createUIPadding(TabContainer, 5)
+
+        -- Create tab content container
+        TabContentContainer = Instance.new("Frame")
+        TabContentContainer.Name = "TabContentContainer"
+        TabContentContainer.Size = UDim2.new(1, -160, 1, -45)
+        TabContentContainer.Position = UDim2.new(0, 155, 0, 40)
+        TabContentContainer.BackgroundColor3 = currentTheme.TabContent
+        TabContentContainer.BorderSizePixel = 0
+        TabContentContainer.Parent = MainFrame
+
+        createUICorner(TabContentContainer, 8)
+    end
+
+    -- Create tab button
+    local tabButton = Instance.new("TextButton")
+    tabButton.Name = tabName .. "_TabButton"
+    tabButton.Size = UDim2.new(1, -10, 0, 40)
+    tabButton.BackgroundColor3 = currentTheme.ElementBackground
+    tabButton.Text = ""
+    tabButton.BorderSizePixel = 0
+    tabButton.Parent = TabContainer
+
+    createUICorner(tabButton, 6)
+    animateHover(tabButton, currentTheme.ButtonHover, currentTheme.ElementBackground)
+
+    -- Tab icon
+    if icon then
+        local tabIcon = Instance.new("ImageLabel")
+        tabIcon.Name = "TabIcon"
+        tabIcon.Size = UDim2.new(0, 20, 0, 20)
+        tabIcon.Position = UDim2.new(0, 10, 0.5, -10)
+        tabIcon.BackgroundTransparency = 1
+        tabIcon.Image = icon
+        tabIcon.ImageColor3 = currentTheme.TextColor
+        tabIcon.Parent = tabButton
+    end
+
+    -- Tab label
+    local tabLabel = Instance.new("TextLabel")
+    tabLabel.Name = "TabLabel"
+    tabLabel.Size = UDim2.new(1, icon and -40 or -20, 1, 0)
+    tabLabel.Position = UDim2.new(0, icon and 35 or 10, 0, 0)
+    tabLabel.BackgroundTransparency = 1
+    tabLabel.Text = tabName
+    tabLabel.TextColor3 = currentTheme.TextColor
+    tabLabel.Font = Enum.Font.Gotham
+    tabLabel.TextSize = 14
+    tabLabel.TextXAlignment = Enum.TextXAlignment.Left
+    tabLabel.Parent = tabButton
+
+    -- Create tab content frame with ScrollingFrame
+    local tabContent = Instance.new("ScrollingFrame")
+    tabContent.Name = tabName .. "_TabContent"
+    tabContent.Size = UDim2.new(1, -10, 1, -10)
+    tabContent.Position = UDim2.new(0, 5, 0, 5)
+    tabContent.BackgroundTransparency = 1
+    tabContent.BorderSizePixel = 0
+    tabContent.ScrollBarThickness = 4
+    tabContent.ScrollBarImageColor3 = currentTheme.AccentColor
+    tabContent.CanvasSize = UDim2.new(0, 0, 0, 0)
+    tabContent.Parent = TabContentContainer
+    tabContent.Visible = false
+
+    createUIListLayout(tabContent, Enum.FillDirection.Vertical, Enum.HorizontalAlignment.Center, 10)
+    createUIPadding(tabContent, 5)
+
+    -- Auto resize content
+    tabContent.ChildAdded:Connect(function()
+        local contentSize = tabContent.UIListLayout.AbsoluteContentSize
+        tabContent.CanvasSize = UDim2.new(0, 0, 0, contentSize.Y + 20)
+    end)
+
+    -- Tab button click event
+    tabButton.MouseButton1Click:Connect(function()
+        -- Hide all tabs
+        for _, tab in pairs(Tabs) do
+            if tab.Content then
+                tab.Content.Visible = false
+            end
+            if tab.Button then
+                tab.Button.BackgroundColor3 = currentTheme.ElementBackground
+                local label = tab.Button:FindFirstChild("TabLabel")
+                if label then
+                    label.TextColor3 = currentTheme.TextColor
+                end
+                local icon = tab.Button:FindFirstChild("TabIcon")
+                if icon then
+                    icon.ImageColor3 = currentTheme.TextColor
+                end
+            end
+        end
+        
+        -- Show selected tab
+        tabContent.Visible = true
+        tabButton.BackgroundColor3 = currentTheme.AccentColor
+        tabLabel.TextColor3 = currentTheme == themes.Manga and Color3.fromRGB(255, 255, 255) or currentTheme.TextColor
+        if icon then
+            local tabIcon = tabButton:FindFirstChild("TabIcon")
+            if tabIcon then
+                tabIcon.ImageColor3 = currentTheme == themes.Manga and Color3.fromRGB(255, 255, 255) or currentTheme.TextColor
+            end
+        end
+        activeTab = Tabs[tabName]
+    end)
+
+    -- Store tab data
+    Tabs[tabName] = {
+        Button = tabButton,
+        Content = tabContent,
+        Elements = {}
+    }
+
+    -- Auto-select first tab
+    if activeTab == nil then
+        tabButton.MouseButton1Click:Fire()
+    end
+
+    -- Update canvas size
+    local tabListLayout = TabContainer:FindFirstChild("UIListLayout")
+    if tabListLayout then
+        TabContainer.CanvasSize = UDim2.new(0, 0, 0, tabListLayout.AbsoluteContentSize.Y + 10)
+    end
+
+    return tabContent
+end
+
+-- Section creation
+function AstroHubV2:CreateSection(parentTabContent, sectionName)
+    if not parentTabContent or not parentTabContent:IsA("ScrollingFrame") then
+        warn("AstroHubV2: CreateSection requires a valid parent tab content frame.")
+        return nil
+    end
+
+    debugLog("Creating section: " .. sectionName)
+
+    local sectionFrame = Instance.new("Frame")
+    sectionFrame.Name = sectionName .. "_Section"
+    sectionFrame.Size = UDim2.new(1, -10, 0, 0)
+    sectionFrame.AutomaticSize = Enum.AutomaticSize.Y
+    sectionFrame.BackgroundColor3 = currentTheme.SectionBackground
+    sectionFrame.BorderSizePixel = 0
+    sectionFrame.Parent = parentTabContent
+
+    createUICorner(sectionFrame, 8)
+    
+    if currentTheme == themes.Manga then
+        createUIStroke(sectionFrame, 1, currentTheme.Divider, 0.5)
+    else
+        createShadow(sectionFrame, 10, 0.9)
+    end
+
+    -- Section header
+    local sectionHeader = Instance.new("Frame")
+    sectionHeader.Name = "SectionHeader"
+    sectionHeader.Size = UDim2.new(1, 0, 0, 35)
+    sectionHeader.BackgroundTransparency = 1
+    sectionHeader.Parent = sectionFrame
+
+    -- Section title
+    local sectionTitle = Instance.new("TextLabel")
+    sectionTitle.Name = "SectionTitle"
+    sectionTitle.Size = UDim2.new(1, -40, 1, 0)
+    sectionTitle.Position = UDim2.new(0, 15, 0, 0)
+    sectionTitle.BackgroundTransparency = 1
+    sectionTitle.Text = sectionName
+    sectionTitle.TextColor3 = currentTheme.TextColor
+    sectionTitle.Font = Enum.Font.GothamBold
+    sectionTitle.TextSize = 14
+    sectionTitle.TextXAlignment = Enum.TextXAlignment.Left
+    sectionTitle.Parent = sectionHeader
+
+    -- Collapse/Expand button
+    local collapseButton = Instance.new("TextButton")
+    collapseButton.Name = "CollapseButton"
+    collapseButton.Size = UDim2.new(0, 20, 0, 20)
+    collapseButton.Position = UDim2.new(1, -30, 0.5, -10)
+    collapseButton.BackgroundTransparency = 1
+    collapseButton.Text = "▼"
+    collapseButton.TextColor3 = currentTheme.TextColor
+    collapseButton.Font = Enum.Font.Gotham
+    collapseButton.TextSize = 12
+    collapseButton.BorderSizePixel = 0
+    collapseButton.Parent = sectionHeader
+
+    -- Section content container
+    local sectionContent = Instance.new("Frame")
+    sectionContent.Name = "SectionContent"
+    sectionContent.Size = UDim2.new(1, -20, 0, 0)
+    sectionContent.Position = UDim2.new(0, 10, 0, 35)
+    sectionContent.AutomaticSize = Enum.AutomaticSize.Y
+    sectionContent.BackgroundTransparency = 1
+    sectionContent.BorderSizePixel = 0
+    sectionContent.Parent = sectionFrame
+
+    createUIListLayout(sectionContent, Enum.FillDirection.Vertical, Enum.HorizontalAlignment.Center, 8)
+    createUIPadding(sectionContent, {bottom = 10})
+
+    -- Collapse functionality
+    local isCollapsed = false
+    collapseButton.MouseButton1Click:Connect(function()
+        isCollapsed = not isCollapsed
+        sectionContent.Visible = not isCollapsed
+        collapseButton.Text = isCollapsed and "▶" or "▼"
+        
+        if isCollapsed then
+            sectionFrame.AutomaticSize = Enum.AutomaticSize.None
+            sectionFrame.Size = UDim2.new(1, -10, 0, 35)
+        else
+            sectionFrame.AutomaticSize = Enum.AutomaticSize.Y
+        end
+    end)
+
+    return sectionContent
+end
+
+-- Button creation
+function AstroHubV2:CreateButton(parentSection, text, callback)
+    if not parentSection or not parentSection:IsA("Frame") then
+        warn("AstroHubV2: CreateButton requires a valid parent section frame.")
+        return nil
+    end
+
+    local button = Instance.new("TextButton")
+    button.Name = text .. "_Button"
+    button.Size = UDim2.new(1, -10, 0, 38)
+    button.BackgroundColor3 = currentTheme.ElementBackground
+    button.Text = text
+    button.TextColor3 = currentTheme.TextColor
+    button.Font = Enum.Font.Gotham
+    button.TextSize = 14
+    button.BorderSizePixel = 0
+    button.Parent = parentSection
+
+    createUICorner(button, 6)
+    animateHover(button, currentTheme.ButtonHover, currentTheme.ElementBackground)
+
+    -- Click animation
+    button.MouseButton1Click:Connect(function()
+        -- Ripple effect
+        local ripple = Instance.new("Frame")
+        ripple.Name = "Ripple"
+        ripple.Size = UDim2.new(0, 0, 0, 0)
+        ripple.Position = UDim2.new(0.5, 0, 0.5, 0)
+        ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+        ripple.BackgroundColor3 = currentTheme.AccentColor
+        ripple.BackgroundTransparency = 0.5
+        ripple.BorderSizePixel = 0
+        ripple.Parent = button
+
+        createUICorner(ripple, 6)
+
+        local rippleAnim = TweenService:Create(ripple, TweenInfo.new(0.5), {
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1
+        })
+        
+        rippleAnim:Play()
+        rippleAnim.Completed:Connect(function()
+            ripple:Destroy()
+        end)
+
+        if callback then
+            callback()
+        end
+    end)
+
+    return button
+end
+
+-- Toggle creation
+function AstroHubV2:CreateToggle(parentSection, text, defaultValue, callback)
+    if not parentSection or not parentSection:IsA("Frame") then
+        warn("AstroHubV2: CreateToggle requires a valid parent section frame.")
+        return nil
+    end
+
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Name = text .. "_Toggle"
+    toggleFrame.Size = UDim2.new(1, -10, 0, 38)
+    toggleFrame.BackgroundColor3 = currentTheme.ElementBackground
+    toggleFrame.BorderSizePixel = 0
+    toggleFrame.Parent = parentSection
+
+    createUICorner(toggleFrame, 6)
+    createUIPadding(toggleFrame, 10)
+
+    -- Toggle label
+    local toggleLabel = Instance.new("TextLabel")
+    toggleLabel.Name = "ToggleLabel"
+    toggleLabel.Size = UDim2.new(1, -60, 1, 0)
+    toggleLabel.Position = UDim2.new(0, 0, 0, 0)
+    toggleLabel.BackgroundTransparency = 1
+    toggleLabel.Text = text
+    toggleLabel.TextColor3 = currentTheme.TextColor
+    toggleLabel.Font = Enum.Font.Gotham
+    toggleLabel.TextSize = 14
+    toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    toggleLabel.Parent = toggleFrame
+
+    -- Toggle button container
+    local toggleContainer = Instance.new("Frame")
+    toggleContainer.Name = "ToggleContainer"
+    toggleContainer.Size = UDim2.new(0, 45, 0, 22)
+    toggleContainer.Position = UDim2.new(1, -45, 0.5, -11)
+    toggleContainer.BackgroundColor3 = defaultValue and currentTheme.ToggleOn or currentTheme.ToggleOff
+    toggleContainer.BorderSizePixel = 0
+    toggleContainer.Parent = toggleFrame
+
+    createUICorner(toggleContainer, 11)
+
+    -- Toggle indicator
+    local toggleIndicator = Instance.new("Frame")
+    toggleIndicator.Name = "ToggleIndicator"
+    toggleIndicator.Size = UDim2.new(0, 18, 0, 18)
+    toggleIndicator.Position = defaultValue and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
+    toggleIndicator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    toggleIndicator.BorderSizePixel = 0
+    toggleIndicator.Parent = toggleContainer
+
+    createUICorner(toggleIndicator, 9)
+    
+    if currentTheme == themes.Space then
+        createShadow(toggleIndicator, 4, 0.8)
+    end
+
+    local currentValue = defaultValue or false
+
+    -- Toggle function
+    local function toggle()
+        currentValue = not currentValue
+        
+        local newColor = currentValue and currentTheme.ToggleOn or currentTheme.ToggleOff
+        local newPosition = currentValue and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
+        
+        TweenService:Create(toggleContainer, TweenInfo.new(0.3), {BackgroundColor3 = newColor}):Play()
+        TweenService:Create(toggleIndicator, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Position = newPosition}):Play()
+        
+        if callback then
+            callback(currentValue)
+        end
+        
+        flags[text] = currentValue
+        debugLog("Toggle '" .. text .. "' set to: " .. tostring(currentValue))
+    end
+
+    -- Click handler
+    local clickButton = Instance.new("TextButton")
+    clickButton.Name = "ClickHandler"
+    clickButton.Size = UDim2.new(1, 0, 1, 0)
+    clickButton.BackgroundTransparency = 1
+    clickButton.Text = ""
+    clickButton.Parent = toggleFrame
+
+    clickButton.MouseButton1Click:Connect(toggle)
+
+    -- Return object with methods
+    return {
+        Set = function(self, value)
+            if value ~= currentValue then
+                toggle()
+            end
+        end,
+        Get = function(self)
+            return currentValue
+        end,
+        Show = function(self)
+            toggleFrame.Visible = true
+        end,
+        Hide = function(self)
+            toggleFrame.Visible = false
+        end
+    }
+end
+
+-- Slider creation
+function AstroHubV2:CreateSlider(parentSection, text, minValue, maxValue, defaultValue, callback)
+    if not parentSection or not parentSection:IsA("Frame") then
+        warn("AstroHubV2: CreateSlider requires a valid parent section frame.")
+        return nil
+    end
+
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Name = text .. "_Slider"
+    sliderFrame.Size = UDim2.new(1, -10, 0, 55)
+    sliderFrame.BackgroundColor3 = currentTheme.ElementBackground
+    sliderFrame.BorderSizePixel = 0
+    sliderFrame.Parent = parentSection
+
+    createUICorner(sliderFrame, 6)
+    createUIPadding(sliderFrame, 10)
+
+    -- Slider label
+    local sliderLabel = Instance.new("TextLabel")
+    sliderLabel.Name = "SliderLabel"
+    sliderLabel.Size = UDim2.new(1, -60, 0, 20)
+    sliderLabel.Position = UDim2.new(0, 0, 0, 0)
+    sliderLabel.BackgroundTransparency = 1
+    sliderLabel.Text = text
+    sliderLabel.TextColor3 = currentTheme.TextColor
+    sliderLabel.Font = Enum.Font.Gotham
+    sliderLabel.TextSize = 14
+    sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+    sliderLabel.Parent = sliderFrame
+
+    -- Value label
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Name = "ValueLabel"
+    valueLabel.Size = UDim2.new(0, 60, 0, 20)
+    valueLabel.Position = UDim2.new(1, -60, 0, 0)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Text = tostring(defaultValue or minValue)
+    valueLabel.TextColor3 = currentTheme.TextColor
+    valueLabel.Font = Enum.Font.Gotham
+    valueLabel.TextSize = 14
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    valueLabel.Parent = sliderFrame
+
+    -- Slider track
+    local sliderTrack = Instance.new("Frame")
+    sliderTrack.Name = "SliderTrack"
+    sliderTrack.Size = UDim2.new(1, -20, 0, 6)
+    sliderTrack.Position = UDim2.new(0, 10, 1, -16)
+    sliderTrack.BackgroundColor3 = currentTheme.ToggleOff
+    sliderTrack.BorderSizePixel = 0
+    sliderTrack.Parent = sliderFrame
+
+    createUICorner(sliderTrack, 3)
+
+    -- Slider fill
+    local sliderFill = Instance.new("Frame")
+    sliderFill.Name = "SliderFill"
+    sliderFill.Size = UDim2.new(0, 0, 1, 0)
+    sliderFill.Position = UDim2.new(0, 0, 0, 0)
+    sliderFill.BackgroundColor3 = currentTheme.SliderFill
+    sliderFill.BorderSizePixel = 0
+    sliderFill.Parent = sliderTrack
+
+    createUICorner(sliderFill, 3)
+
+    -- Slider handle
+    local sliderHandle = Instance.new("Frame")
+    sliderHandle.Name = "SliderHandle"
+    sliderHandle.Size = UDim2.new(0, 16, 0, 16)
+    sliderHandle.Position = UDim2.new(0, -8, 0.5, -8)
+    sliderHandle.BackgroundColor3 = currentTheme.AccentColor
+    sliderHandle.BorderSizePixel = 0
+    sliderHandle.Parent = sliderTrack
+
+    createUICorner(sliderHandle, 8)
+    
+    if currentTheme == themes.Space then
+        createShadow(sliderHandle, 6, 0.8)
+    end
+
+    local currentValue = defaultValue or minValue
+    local dragging = false
+
+    -- Update slider function
+    local function updateSlider(input)
+        local trackPosition = sliderTrack.AbsolutePosition.X
+        local trackSize = sliderTrack.AbsoluteSize.X
+        local mouseX = input.Position.X
+        
+        local relativeX = math.clamp(mouseX - trackPosition, 0, trackSize)
+        local percentage = relativeX / trackSize
+        
+        currentValue = math.floor(minValue + (maxValue - minValue) * percentage + 0.5)
+        
+        valueLabel.Text = tostring(currentValue)
+        sliderFill.Size = UDim2.new(percentage, 0, 1, 0)
+        sliderHandle.Position = UDim2.new(percentage, -8, 0.5, -8)
+        
+        if callback then
+            callback(currentValue)
+        end
+        
+        flags[text] = currentValue
+    end
+
+    -- Initial setup
+    local initialPercentage = (currentValue - minValue) / (maxValue - minValue)
+    sliderFill.Size = UDim2.new(initialPercentage, 0, 1, 0)
+    sliderHandle.Position = UDim2.new(initialPercentage, -8, 0.5, -8)
+
+    -- Handle input
+    local clickDetector = Instance.new("TextButton")
+    clickDetector.Name = "ClickDetector"
+    clickDetector.Size = UDim2.new(1, 0, 0, 20)
+    clickDetector.Position = UDim2.new(0, 0, 1, -20)
+    clickDetector.BackgroundTransparency = 1
+    clickDetector.Text = ""
+    clickDetector.Parent = sliderFrame
+
+    clickDetector.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            updateSlider(input)
+        end
+    end)
+
+    clickDetector.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateSlider(input)
+        end
+    end)
+
+    clickDetector.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    -- Return object with methods
+    return {
+        Set = function(self, value)
+            currentValue = math.clamp(value, minValue, maxValue)
+            valueLabel.Text = tostring(currentValue)
+            local percentage = (currentValue - minValue) / (maxValue - minValue)
+            sliderFill.Size = UDim2.new(percentage, 0, 1, 0)
+            sliderHandle.Position = UDim2.new(percentage, -8, 0.5, -8)
+            flags[text] = currentValue
+        end,
+        Get = function(self)
+            return currentValue
+        end,
+        Show = function(self)
+            sliderFrame.Visible = true
+        end,
+        Hide = function(self)
+            sliderFrame.Visible = false
+        end
+    }
+end
+
+-- Dropdown creation
+function AstroHubV2:CreateDropdown(parentSection, text, options, callback)
+    if not parentSection or not parentSection:IsA("Frame") then
+        warn("AstroHubV2: CreateDropdown requires a valid parent section frame.")
+        return nil
+    end
+
+    local dropdownFrame = Instance.new("Frame")
+    dropdownFrame.Name = text .. "_Dropdown"
+    dropdownFrame.Size = UDim2.new(1, -10, 0, 38)
+    dropdownFrame.BackgroundColor3 = currentTheme.ElementBackground
+    dropdownFrame.BorderSizePixel = 0
+    dropdownFrame.Parent = parentSection
+
+    createUICorner(dropdownFrame, 6)
+    createUIPadding(dropdownFrame, 10)
+
+    -- Dropdown button
+    local dropdownButton = Instance.new("TextButton")
+    dropdownButton.Name = "DropdownButton"
+    dropdownButton.Size = UDim2.new(1, 0, 1, 0)
+    dropdownButton.Position = UDim2.new(0, 0, 0, 0)
+    dropdownButton.BackgroundTransparency = 1
+    dropdownButton.Text = text .. ": " .. (options[1] or "None")
+    dropdownButton.TextColor3 = currentTheme.TextColor
+    dropdownButton.Font = Enum.Font.Gotham
+    dropdownButton.TextSize = 14
+    dropdownButton.TextXAlignment = Enum.TextXAlignment.Left
+    dropdownButton.Parent = dropdownFrame
+
+    -- Dropdown arrow
+    local dropdownArrow = Instance.new("TextLabel")
+    dropdownArrow.Name = "DropdownArrow"
+    dropdownArrow.Size = UDim2.new(0, 20, 1, 0)
+    dropdownArrow.Position = UDim2.new(1, -20, 0, 0)
+    dropdownArrow.BackgroundTransparency = 1
+    dropdownArrow.Text = "▼"
+    dropdownArrow.TextColor3 = currentTheme.TextColor
+    dropdownArrow.Font = Enum.Font.Gotham
+    dropdownArrow.TextSize = 12
+    dropdownArrow.TextXAlignment = Enum.TextXAlignment.Center
+    dropdownArrow.Parent = dropdownFrame
+
+    -- Dropdown list container
+    local dropdownListContainer = Instance.new("Frame")
+    dropdownListContainer.Name = "DropdownListContainer"
+    dropdownListContainer.Size = UDim2.new(1, 0, 0, 0)
+    dropdownListContainer.Position = UDim2.new(0, 0, 1, 5)
+    dropdownListContainer.BackgroundColor3 = currentTheme.ElementBackground
+    dropdownListContainer.BorderSizePixel = 0
+    dropdownListContainer.ClipsDescendants = true
+    dropdownListContainer.Visible = false
+    dropdownListContainer.Parent = dropdownFrame
+
+    createUICorner(dropdownListContainer, 6)
+    
+    if currentTheme == themes.Space then
+        createShadow(dropdownListContainer, 10, 0.8)
+    else
+        createUIStroke(dropdownListContainer, 1, currentTheme.Divider, 0.5)
+    end
+
+    -- Dropdown list
+    local dropdownList = Instance.new("ScrollingFrame")
+    dropdownList.Name = "DropdownList"
+    dropdownList.Size = UDim2.new(1, 0, 1, 0)
+    dropdownList.Position = UDim2.new(0, 0, 0, 0)
+    dropdownList.BackgroundTransparency = 1
+    dropdownList.BorderSizePixel = 0
+    dropdownList.ScrollBarThickness = 4
+    dropdownList.ScrollBarImageColor3 = currentTheme.AccentColor
+    dropdownList.CanvasSize = UDim2.new(0, 0, 0, #options * 32)
+    dropdownList.Parent = dropdownListContainer
+
+    createUIListLayout(dropdownList, Enum.FillDirection.Vertical, Enum.HorizontalAlignment.Center, 2)
+    createUIPadding(dropdownList, 5)
+
+    local currentValue = options[1] or ""
+    local isOpen = false
+
+    -- Create option buttons
+    for _, option in ipairs(options) do
+        local optionButton = Instance.new("TextButton")
+        optionButton.Name = option .. "_Option"
+        optionButton.Size = UDim2.new(1, -10, 0, 28)
+        optionButton.BackgroundColor3 = currentTheme.SectionBackground
+        optionButton.Text = option
+        optionButton.TextColor3 = currentTheme.TextColor
+        optionButton.Font = Enum.Font.Gotham
+        optionButton.TextSize = 14
+        optionButton.BorderSizePixel = 0
+        optionButton.Parent = dropdownList
+
+        createUICorner(optionButton, 4)
+        animateHover(optionButton, currentTheme.ButtonHover, currentTheme.SectionBackground)
+
+        optionButton.MouseButton1Click:Connect(function()
+            currentValue = option
+            dropdownButton.Text = text .. ": " .. option
+            isOpen = false
+            
+            TweenService:Create(dropdownListContainer, TweenInfo.new(0.3), {Size = UDim2.new(1, 0, 0, 0)}):Play()
+            TweenService:Create(dropdownArrow, TweenInfo.new(0.3), {Rotation = 0}):Play()
+            
+            task.wait(0.3)
+            dropdownListContainer.Visible = false
+            
+            if callback then
+                callback(option)
+            end
+            
+            flags[text] = option
+            debugLog("Dropdown '" .. text .. "' selected: " .. option)
+        end)
+    end
+
+    -- Toggle dropdown
+    dropdownButton.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        
+        if isOpen then
+            dropdownListContainer.Visible = true
+            local targetSize = math.min(#options * 32 + 10, 150)
+            TweenService:Create(dropdownListContainer, TweenInfo.new(0.3), {Size = UDim2.new(1, 0, 0, targetSize)}):Play()
+            TweenService:Create(dropdownArrow, TweenInfo.new(0.3), {Rotation = 180}):Play()
+        else
+            TweenService:Create(dropdownListContainer, TweenInfo.new(0.3), {Size = UDim2.new(1, 0, 0, 0)}):Play()
+            TweenService:Create(dropdownArrow, TweenInfo.new(0.3), {Rotation = 0}):Play()
+            
+            task.wait(0.3)
+            dropdownListContainer.Visible = false
+        end
+    end)
+
+    -- Return object with methods
+    return {
+        Set = function(self, value)
+            if table.find(options, value) then
+                currentValue = value
+                dropdownButton.Text = text .. ": " .. value
+                flags[text] = value
+            end
+        end,
+        Get = function(self)
+            return currentValue
+        end,
+        Show = function(self)
+            dropdownFrame.Visible = true
+        end,
+        Hide = function(self)
+            dropdownFrame.Visible = false
+        end
+    }
+end
+
+-- Multi-Dropdown creation
+function AstroHubV2:CreateMultiDropdown(parentSection, text, options, callback)
+    if not parentSection or not parentSection:IsA("Frame") then
+        warn("AstroHubV2: CreateMultiDropdown requires a valid parent section frame.")
+        return nil
+    end
+
+    local dropdownFrame = Instance.new("Frame")
+    dropdownFrame.Name = text .. "_MultiDropdown"
+    dropdownFrame.Size = UDim2.new(1, -10, 0, 38)
+    dropdownFrame.BackgroundColor3 = currentTheme.ElementBackground
+    dropdownFrame.BorderSizePixel = 0
+    dropdownFrame.Parent = parentSection
+
+    createUICorner(dropdownFrame, 6)
+    createUIPadding(dropdownFrame, 10)
+
+    local selectedOptions = {}
+
+    -- Dropdown button
+    local dropdownButton = Instance.new("TextButton")
+    dropdownButton.Name = "DropdownButton"
+    dropdownButton.Size = UDim2.new(1, 0, 1, 0)
+    dropdownButton.Position = UDim2.new(0, 0, 0, 0)
+    dropdownButton.BackgroundTransparency = 1
+    dropdownButton.Text = text .. ": None"
+    dropdownButton.TextColor3 = currentTheme.TextColor
+    dropdownButton.Font = Enum.Font.Gotham
+    dropdownButton.TextSize = 14
+    dropdownButton.TextXAlignment = Enum.TextXAlignment.Left
+    dropdownButton.Parent = dropdownFrame
+
+    -- Dropdown arrow
+    local dropdownArrow = Instance.new("TextLabel")
+    dropdownArrow.Name = "DropdownArrow"
+    dropdownArrow.Size = UDim2.new(0, 20, 1, 0)
+    dropdownArrow.Position = UDim2.new(1, -20, 0, 0)
+    dropdownArrow.BackgroundTransparency = 1
+    dropdownArrow.Text = "▼"
+    dropdownArrow.TextColor3 = currentTheme.TextColor
+    dropdownArrow.Font = Enum.Font.Gotham
+    dropdownArrow.TextSize = 12
+    dropdownArrow.TextXAlignment = Enum.TextXAlignment.Center
+    dropdownArrow.Parent = dropdownFrame
+
+    -- Dropdown list container
+    local dropdownListContainer = Instance.new("Frame")
+    dropdownListContainer.Name = "DropdownListContainer"
+    dropdownListContainer.Size = UDim2.new(1, 0, 0, 0)
+    dropdownListContainer.Position = UDim2.new(0, 0, 1, 5)
+    dropdownListContainer.BackgroundColor3 = currentTheme.ElementBackground
+    dropdownListContainer.BorderSizePixel = 0
+    dropdownListContainer.ClipsDescendants = true
+    dropdownListContainer.Visible = false
+    dropdownListContainer.Parent = dropdownFrame
+
+    createUICorner(dropdownListContainer, 6)
+    
+    if currentTheme == themes.Space then
+        createShadow(dropdownListContainer, 10, 0.8)
+    else
+        createUIStroke(dropdownListContainer, 1, currentTheme.Divider, 0.5)
+    end
+
+    -- Dropdown list
+    local dropdownList = Instance.new("ScrollingFrame")
+    dropdownList.Name = "DropdownList"
+    dropdownList.Size = UDim2.new(1, 0, 1, 0)
+    dropdownList.Position = UDim2.new(0, 0, 0, 0)
+    dropdownList.BackgroundTransparency = 1
+    dropdownList.BorderSizePixel = 0
+    dropdownList.ScrollBarThickness = 4
+    dropdownList.ScrollBarImageColor3 = currentTheme.AccentColor
+    dropdownList.CanvasSize = UDim2.new(0, 0, 0, #options * 32)
+    dropdownList.Parent = dropdownListContainer
+
+    createUIListLayout(dropdownList, Enum.FillDirection.Vertical, Enum.HorizontalAlignment.Center, 2)
+    createUIPadding(dropdownList, 5)
+
+    local isOpen = false
+
+    local function updateButtonText()
+        if #selectedOptions == 0 then
+            dropdownButton.Text = text .. ": None"
+        else
+            dropdownButton.Text = text .. ": " .. table.concat(selectedOptions, ", ")
+        end
+    end
+
+    -- Create option buttons with checkboxes
+    for _, option in ipairs(options) do
+        local optionFrame = Instance.new("Frame")
+        optionFrame.Name = option .. "_Option"
+        optionFrame.Size = UDim2.new(1, -10, 0, 28)
+        optionFrame.BackgroundColor3 = currentTheme.SectionBackground
+        optionFrame.BorderSizePixel = 0
+        optionFrame.Parent = dropdownList
+
+        createUICorner(optionFrame, 4)
+
+        -- Checkbox
+        local checkbox = Instance.new("Frame")
+        checkbox.Name = "Checkbox"
+        checkbox.Size = UDim2.new(0, 16, 0, 16)
+        checkbox.Position = UDim2.new(0, 8, 0.5, -8)
+        checkbox.BackgroundColor3 = currentTheme.ElementBackground
+        checkbox.BorderSizePixel = 0
+        checkbox.Parent = optionFrame
+
+        createUICorner(checkbox, 4)
+        createUIStroke(checkbox, 1, currentTheme.Divider)
+
+        -- Checkmark
+        local checkmark = Instance.new("TextLabel")
+        checkmark.Name = "Checkmark"
+        checkmark.Size = UDim2.new(1, 0, 1, 0)
+        checkmark.BackgroundTransparency = 1
+        checkmark.Text = "✓"
+        checkmark.TextColor3 = currentTheme.AccentColor
+        checkmark.Font = Enum.Font.GothamBold
+        checkmark.TextSize = 12
+        checkmark.Visible = false
+        checkmark.Parent = checkbox
+
+        -- Option label
+        local optionLabel = Instance.new("TextLabel")
+        optionLabel.Name = "OptionLabel"
+        optionLabel.Size = UDim2.new(1, -35, 1, 0)
+        optionLabel.Position = UDim2.new(0, 30, 0, 0)
+        optionLabel.BackgroundTransparency = 1
+        optionLabel.Text = option
+        optionLabel.TextColor3 = currentTheme.TextColor
+        optionLabel.Font = Enum.Font.Gotham
+        optionLabel.TextSize = 14
+        optionLabel.TextXAlignment = Enum.TextXAlignment.Left
+        optionLabel.Parent = optionFrame
+
+        -- Click handler
+        local clickButton = Instance.new("TextButton")
+        clickButton.Name = "ClickHandler"
+        clickButton.Size = UDim2.new(1, 0, 1, 0)
+        clickButton.BackgroundTransparency = 1
+        clickButton.Text = ""
+        clickButton.Parent = optionFrame
+
+        animateHover(optionFrame, currentTheme.ButtonHover, currentTheme.SectionBackground)
+
+        clickButton.MouseButton1Click:Connect(function()
+            local index = table.find(selectedOptions, option)
+            
+            if index then
+                table.remove(selectedOptions, index)
+                checkmark.Visible = false
+                checkbox.BackgroundColor3 = currentTheme.ElementBackground
+            else
+                table.insert(selectedOptions, option)
+                checkmark.Visible = true
+                checkbox.BackgroundColor3 = currentTheme.AccentColor
+            end
+            
+            updateButtonText()
+            
+            if callback then
+                callback(selectedOptions)
+            end
+            
+            flags[text] = selectedOptions
+        end)
+    end
+
+    -- Toggle dropdown
+    dropdownButton.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        
+        if isOpen then
+            dropdownListContainer.Visible = true
+            local targetSize = math.min(#options * 32 + 10, 150)
+            TweenService:Create(dropdownListContainer, TweenInfo.new(0.3), {Size = UDim2.new(1, 0, 0, targetSize)}):Play()
+            TweenService:Create(dropdownArrow, TweenInfo.new(0.3), {Rotation = 180}):Play()
+        else
+            TweenService:Create(dropdownListContainer, TweenInfo.new(0.3), {Size = UDim2.new(1, 0, 0, 0)}):Play()
+            TweenService:Create(dropdownArrow, TweenInfo.new(0.3), {Rotation = 0}):Play()
+            
+            task.wait(0.3)
+            dropdownListContainer.Visible = false
+        end
+    end)
+
+    -- Return object with methods
+    return {
+        Set = function(self, values)
+            selectedOptions = {}
+            
+            -- Reset all checkboxes
+            for _, child in ipairs(dropdownList:GetChildren()) do
+                if child:IsA("Frame") and child:FindFirstChild("Checkbox") then
+                    local checkbox = child:FindFirstChild("Checkbox")
+                    local checkmark = checkbox:FindFirstChild("Checkmark")
+                    checkmark.Visible = false
+                    checkbox.BackgroundColor3 = currentTheme.ElementBackground
+                end
+            end
+            
+            -- Set new values
+            for _, value in ipairs(values) do
+                if table.find(options, value) then
+                    table.insert(selectedOptions, value)
+                    
+                    -- Update checkbox visual
+                    local optionFrame = dropdownList:FindFirstChild(value .. "_Option")
+                    if optionFrame then
+                        local checkbox = optionFrame:FindFirstChild("Checkbox")
+                        local checkmark = checkbox:FindFirstChild("Checkmark")
+                        checkmark.Visible = true
+                        checkbox.BackgroundColor3 = currentTheme.AccentColor
+                    end
+                end
+            end
+            
+            updateButtonText()
+            flags[text] = selectedOptions
+        end,
+        Get = function(self)
+            return selectedOptions
+        end,
+        Show = function(self)
+            dropdownFrame.Visible = true
+        end,
+        Hide = function(self)
+            dropdownFrame.Visible = false
+        end
+    }
+end
+
+-- Input creation
+function AstroHubV2:CreateInput(parentSection, text, defaultValue, callback)
+    if not parentSection or not parentSection:IsA("Frame") then
+        warn("AstroHubV2: CreateInput requires a valid parent section frame.")
+        return nil
+    end
+
+    local inputFrame = Instance.new("Frame")
+    inputFrame.Name = text .. "_Input"
+    inputFrame.Size = UDim2.new(1, -10, 0, 55)
+    inputFrame.BackgroundColor3 = currentTheme.ElementBackground
+    inputFrame.BorderSizePixel = 0
+    inputFrame.Parent = parentSection
+
+    createUICorner(inputFrame, 6)
+    createUIPadding(inputFrame, 10)
+
+    -- Input label
+    local inputLabel = Instance.new("TextLabel")
+    inputLabel.Name = "InputLabel"
+    inputLabel.Size = UDim2.new(1, 0, 0, 20)
+    inputLabel.Position = UDim2.new(0, 0, 0, 0)
+    inputLabel.BackgroundTransparency = 1
+    inputLabel.Text = text
+    inputLabel.TextColor3 = currentTheme.TextColor
+    inputLabel.Font = Enum.Font.Gotham
+    inputLabel.TextSize = 14
+    inputLabel.TextXAlignment = Enum.TextXAlignment.Left
+    inputLabel.Parent = inputFrame
+
+    -- Input box
+    local inputBox = Instance.new("TextBox")
+    inputBox.Name = "InputBox"
+    inputBox.Size = UDim2.new(1, 0, 0, 25)
+    inputBox.Position = UDim2.new(0, 0, 1, -25)
+    inputBox.BackgroundColor3 = currentTheme.InputBackground
+    inputBox.Text = defaultValue or ""
+    inputBox.TextColor3 = currentTheme.TextColor
+    inputBox.Font = Enum.Font.Gotham
+    inputBox.TextSize = 14
+    inputBox.TextXAlignment = Enum.TextXAlignment.Left
+    inputBox.PlaceholderText = "Enter " .. text:lower() .. "..."
+    inputBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+    inputBox.BorderSizePixel = 0
+    inputBox.ClearTextOnFocus = false
+    inputBox.Parent = inputFrame
+
+    createUICorner(inputBox, 4)
+    createUIStroke(inputBox, 1, currentTheme.Divider, 0.5)
+
+    -- Focus effects
+    inputBox.Focused:Connect(function()
+        TweenService:Create(inputBox.UIStroke, TweenInfo.new(0.2), {Color = currentTheme.AccentColor}):Play()
+    end)
+
+    inputBox.FocusLost:Connect(function()
+        TweenService:Create(inputBox.UIStroke, TweenInfo.new(0.2), {Color = currentTheme.Divider}):Play()
+        
+        if callback then
+            callback(inputBox.Text)
+        end
+        
+        flags[text] = inputBox.Text
+        debugLog("Input '" .. text .. "' value: " .. inputBox.Text)
+    end)
+
+    -- Return object with methods
+    return {
+        Set = function(self, value)
+            inputBox.Text = value
+            flags[text] = value
+        end,
+        Get = function(self)
+            return inputBox.Text
+        end,
+        Show = function(self)
+            inputFrame.Visible = true
+        end,
+        Hide = function(self)
+            inputFrame.Visible = false
+        end
+    }
+end
+
+-- Label creation
+function AstroHubV2:CreateLabel(parentSection, text, textSize, textColor)
+    if not parentSection or not parentSection:IsA("Frame") then
+        warn("AstroHubV2: CreateLabel requires a valid parent section frame.")
+        return nil
+    end
+
+    local label = Instance.new("TextLabel")
+    label.Name = text .. "_Label"
+    label.Size = UDim2.new(1, -10, 0, textSize or 16)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = textColor or currentTheme.TextColor
+    label.Font = Enum.Font.Gotham
+    label.TextSize = textSize or 14
+    label.TextXAlignment = Enum.TextXAlignment.Center
+    label.TextWrapped = true
+    label.Parent = parentSection
+
+    return label
+end
+
+-- Divider creation
+function AstroHubV2:CreateDivider(parentSection)
+    if not parentSection or not parentSection:IsA("Frame") then
+        warn("AstroHubV2: CreateDivider requires a valid parent section frame.")
+        return nil
+    end
+
+    local divider = Instance.new("Frame")
+    divider.Name = "Divider"
+    divider.Size = UDim2.new(1, -20, 0, 1)
+    divider.BackgroundColor3 = currentTheme.Divider
+    divider.BorderSizePixel = 0
+    divider.Parent = parentSection
+
+    return divider
+end
+
+-- Link Button creation
+function AstroHubV2:CreateLinkButton(parentSection, text, url)
+    if not parentSection or not parentSection:IsA("Frame") then
+        warn("AstroHubV2: CreateLinkButton requires a valid parent section frame.")
+        return nil
+    end
+
+    local button = Instance.new("TextButton")
+    button.Name = text .. "_LinkButton"
+    button.Size = UDim2.new(1, -10, 0, 38)
+    button.BackgroundColor3 = currentTheme.ElementBackground
+    button.Text = ""
+    button.BorderSizePixel = 0
+    button.Parent = parentSection
+
+    createUICorner(button, 6)
+    animateHover(button, currentTheme.ButtonHover, currentTheme.ElementBackground)
+
+    -- Link icon
+    local linkIcon = Instance.new("TextLabel")
+    linkIcon.Name = "LinkIcon"
+    linkIcon.Size = UDim2.new(0, 20, 0, 20)
+    linkIcon.Position = UDim2.new(0, 10, 0.5, -10)
+    linkIcon.BackgroundTransparency = 1
+    linkIcon.Text = "🔗"
+    linkIcon.TextColor3 = currentTheme.AccentColor
+    linkIcon.Font = Enum.Font.Gotham
+    linkIcon.TextSize = 16
+    linkIcon.Parent = button
+
+    -- Link label
+    local linkLabel = Instance.new("TextLabel")
+    linkLabel.Name = "LinkLabel"
+    linkLabel.Size = UDim2.new(1, -40, 1, 0)
+    linkLabel.Position = UDim2.new(0, 35, 0, 0)
+    linkLabel.BackgroundTransparency = 1
+    linkLabel.Text = text
+    linkLabel.TextColor3 = currentTheme.AccentColor
+    linkLabel.Font = Enum.Font.Gotham
+    linkLabel.TextSize = 14
+    linkLabel.TextXAlignment = Enum.TextXAlignment.Left
+    linkLabel.Parent = button
+
+    button.MouseButton1Click:Connect(function()
+        setclipboard(url)
+        self:CreateNotification("Link Copied", "URL copied to clipboard!", 2)
+        debugLog("Link copied: " .. url)
+    end)
+
+    return button
+end
+
+-- Textbox with Copy
+function AstroHubV2:CreateTextboxWithCopy(parentSection, text, defaultValue)
+    if not parentSection or not parentSection:IsA("Frame") then
+        warn("AstroHubV2: CreateTextboxWithCopy requires a valid parent section frame.")
+        return nil
+    end
+
+    local textboxFrame = Instance.new("Frame")
+    textboxFrame.Name = text .. "_TextboxCopy"
+    textboxFrame.Size = UDim2.new(1, -10, 0, 55)
+    textboxFrame.BackgroundColor3 = currentTheme.ElementBackground
+    textboxFrame.BorderSizePixel = 0
+    textboxFrame.Parent = parentSection
+
+    createUICorner(textboxFrame, 6)
+    createUIPadding(textboxFrame, 10)
+
+    -- Textbox label
+    local textboxLabel = Instance.new("TextLabel")
+    textboxLabel.Name = "TextboxLabel"
+    textboxLabel.Size = UDim2.new(1, -40, 0, 20)
+    textboxLabel.Position = UDim2.new(0, 0, 0, 0)
+    textboxLabel.BackgroundTransparency = 1
+    textboxLabel.Text = text
+    textboxLabel.TextColor3 = currentTheme.TextColor
+    textboxLabel.Font = Enum.Font.Gotham
+    textboxLabel.TextSize = 14
+    textboxLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textboxLabel.Parent = textboxFrame
+
+    -- Copy button
+    local copyButton = Instance.new("TextButton")
+    copyButton.Name = "CopyButton"
+    copyButton.Size = UDim2.new(0, 30, 0, 20)
+    copyButton.Position = UDim2.new(1, -30, 0, 0)
+    copyButton.BackgroundColor3 = currentTheme.AccentColor
+    copyButton.Text = "📋"
+    copyButton.TextColor3 = currentTheme == themes.Manga and Color3.fromRGB(255, 255, 255) or currentTheme.TextColor
+    copyButton.Font = Enum.Font.Gotham
+    copyButton.TextSize = 12
+    copyButton.BorderSizePixel = 0
+    copyButton.Parent = textboxFrame
+
+    createUICorner(copyButton, 4)
+    animateHover(copyButton, currentTheme.ButtonHover, currentTheme.AccentColor)
+
+    -- Textbox
+    local textbox = Instance.new("TextBox")
+    textbox.Name = "Textbox"
+    textbox.Size = UDim2.new(1, 0, 0, 25)
+    textbox.Position = UDim2.new(0, 0, 1, -25)
+    textbox.BackgroundColor3 = currentTheme.InputBackground
+    textbox.Text = defaultValue or ""
+    textbox.TextColor3 = currentTheme.TextColor
+    textbox.Font = Enum.Font.Gotham
+    textbox.TextSize = 14
+    textbox.TextXAlignment = Enum.TextXAlignment.Left
+    textbox.TextEditable = false
+    textbox.BorderSizePixel = 0
+    textbox.Parent = textboxFrame
+
+    createUICorner(textbox, 4)
+    createUIStroke(textbox, 1, currentTheme.Divider, 0.5)
+
+    copyButton.MouseButton1Click:Connect(function()
+        setclipboard(textbox.Text)
+        self:CreateNotification("Copied", "Text copied to clipboard!", 2)
+        
+        -- Animation feedback
+        copyButton.Text = "✓"
+        task.wait(1)
+        copyButton.Text = "📋"
+    end)
+
+    -- Return object with methods
+    return {
+        Set = function(self, value)
+            textbox.Text = value
+        end,
+        Get = function(self)
+            return textbox.Text
+        end,
+        Show = function(self)
+            textboxFrame.Visible = true
+        end,
+        Hide = function(self)
+            textboxFrame.Visible = false
+        end
+    }
+end
+
+-- Progress Bar creation
+function AstroHubV2:CreateProgressBar(parentSection, text, initialPercentage)
+    if not parentSection or not parentSection:IsA("Frame") then
+        warn("AstroHubV2: CreateProgressBar requires a valid parent section frame.")
+        return nil
+    end
+
+    local progressFrame = Instance.new("Frame")
+    progressFrame.Name = text .. "_Progress"
+    progressFrame.Size = UDim2.new(1, -10, 0, 45)
+    progressFrame.BackgroundColor3 = currentTheme.ElementBackground
+    progressFrame.BorderSizePixel = 0
+    progressFrame.Parent = parentSection
+
+    createUICorner(progressFrame, 6)
+    createUIPadding(progressFrame, 10)
+
+    -- Progress label
+    local progressLabel = Instance.new("TextLabel")
+    progressLabel.Name = "ProgressLabel"
+    progressLabel.Size = UDim2.new(1, -40, 0, 18)
+    progressLabel.Position = UDim2.new(0, 0, 0, 0)
+    progressLabel.BackgroundTransparency = 1
+    progressLabel.Text = text
+    progressLabel.TextColor3 = currentTheme.TextColor
+    progressLabel.Font = Enum.Font.Gotham
+    progressLabel.TextSize = 14
+    progressLabel.TextXAlignment = Enum.TextXAlignment.Left
+    progressLabel.Parent = progressFrame
+
+    -- Progress percentage
+    local progressPercentage = Instance.new("TextLabel")
+    progressPercentage.Name = "ProgressPercentage"
+    progressPercentage.Size = UDim2.new(0, 40, 0, 18)
+    progressPercentage.Position = UDim2.new(1, -40, 0, 0)
+    progressPercentage.BackgroundTransparency = 1
+    progressPercentage.Text = (initialPercentage or 0) .. "%"
+    progressPercentage.TextColor3 = currentTheme.TextColor
+    progressPercentage.Font = Enum.Font.Gotham
+    progressPercentage.TextSize = 14
+    progressPercentage.TextXAlignment = Enum.TextXAlignment.Right
+    progressPercentage.Parent = progressFrame
+
+    -- Progress bar track
+    local progressTrack = Instance.new("Frame")
+    progressTrack.Name = "ProgressTrack"
+    progressTrack.Size = UDim2.new(1, 0, 0, 8)
+    progressTrack.Position = UDim2.new(0, 0, 1, -12)
+    progressTrack.BackgroundColor3 = currentTheme.ToggleOff
+    progressTrack.BorderSizePixel = 0
+    progressTrack.Parent = progressFrame
+
+    createUICorner(progressTrack, 4)
+
+    -- Progress bar fill
+    local progressFill = Instance.new("Frame")
+    progressFill.Name = "ProgressFill"
+    progressFill.Size = UDim2.new((initialPercentage or 0) / 100, 0, 1, 0)
+    progressFill.Position = UDim2.new(0, 0, 0, 0)
+    progressFill.BackgroundColor3 = currentTheme.SliderFill
+    progressFill.BorderSizePixel = 0
+    progressFill.Parent = progressTrack
+
+    createUICorner(progressFill, 4)
+
+    -- Animated shine effect
+    local shine = Instance.new("Frame")
+    shine.Name = "Shine"
+    shine.Size = UDim2.new(0.2, 0, 1, 0)
+    shine.Position = UDim2.new(-0.2, 0, 0, 0)
+    shine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    shine.BackgroundTransparency = 0.8
+    shine.BorderSizePixel = 0
+    shine.Parent = progressFill
+
+    createUICorner(shine, 4)
+
+    -- Shine animation
+    local shineAnimation = TweenService:Create(shine, TweenInfo.new(1.5, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1), {
+        Position = UDim2.new(1, 0, 0, 0)
+    })
+    shineAnimation:Play()
+
+    -- Return object with methods
+    return {
+        Set = function(self, percentage)
+            percentage = math.clamp(percentage, 0, 100)
+            progressPercentage.Text = percentage .. "%"
+            TweenService:Create(progressFill, TweenInfo.new(0.3), {Size = UDim2.new(percentage / 100, 0, 1, 0)}):Play()
+        end,
+        Get = function(self)
+            return tonumber(progressPercentage.Text:gsub("%%", ""))
+        end,
+        Show = function(self)
+            progressFrame.Visible = true
+        end,
+        Hide = function(self)
+            progressFrame.Visible = false
+        end
+    }
+end
+
+-- Player List Dropdown
+function AstroHubV2:CreatePlayerListDropdown(parentSection, text, callback)
+    if not parentSection or not parentSection:IsA("Frame") then
+        warn("AstroHubV2: CreatePlayerListDropdown requires a valid parent section frame.")
+        return nil
+    end
+
+    local function getPlayerNames()
+        local playerNames = {}
+        for _, player in ipairs(Players:GetPlayers()) do
+            table.insert(playerNames, player.Name)
+        end
+        return playerNames
+    end
+
+    local playerDropdown = self:CreateDropdown(parentSection, text, getPlayerNames(), function(playerName)
+        local player = Players:FindFirstChild(playerName)
+        if player and callback then
+            callback(player)
+        end
+    end)
+
+    -- Update player list when players join/leave
+    local function updatePlayerList()
+        local currentPlayers = getPlayerNames()
+        -- Recreate the dropdown with updated player list
+        -- This is a simplified version - in production you'd update the existing dropdown
+    end
+
+    Players.PlayerAdded:Connect(updatePlayerList)
+    Players.PlayerRemoving:Connect(updatePlayerList)
+
+    return playerDropdown
+end
+
+-- Notification system
+function AstroHubV2:CreateNotification(title, message, duration)
+    duration = duration or 3
+
+    local notification = Instance.new("Frame")
+    notification.Name = "Notification"
+    notification.Size = UDim2.new(0, 300, 0, 80)
+    notification.Position = UDim2.new(1, 20, 0, 20 + (#notificationQueue * 90))
+    notification.BackgroundColor3 = currentTheme.NotificationBg
+    notification.BorderSizePixel = 0
+    notification.Parent = MainWindow or PlayerGui
+
+    createUICorner(notification, 8)
+    
+    if currentTheme == themes.Space then
+        createShadow(notification, 15, 0.6)
+    else
+        createUIStroke(notification, 1, currentTheme.Divider, 0.5)
+    end
+
+    -- Notification accent
+    local accent = Instance.new("Frame")
+    accent.Name = "Accent"
+    accent.Size = UDim2.new(0, 4, 1, 0)
+    accent.Position = UDim2.new(0, 0, 0, 0)
+    accent.BackgroundColor3 = currentTheme.AccentColor
+    accent.BorderSizePixel = 0
+    accent.Parent = notification
+
+    createUICorner(accent, 8)
+
+    -- Notification content
+    local content = Instance.new("Frame")
+    content.Name = "Content"
+    content.Size = UDim2.new(1, -20, 1, 0)
+    content.Position = UDim2.new(0, 10, 0, 0)
+    content.BackgroundTransparency = 1
+    content.Parent = notification
+
+    -- Notification title
+    local notificationTitle = Instance.new("TextLabel")
+    notificationTitle.Name = "NotificationTitle"
+    notificationTitle.Size = UDim2.new(1, -30, 0, 25)
+    notificationTitle.Position = UDim2.new(0, 5, 0, 10)
+    notificationTitle.BackgroundTransparency = 1
+    notificationTitle.Text = title
+    notificationTitle.TextColor3 = currentTheme.TextColor
+    notificationTitle.Font = Enum.Font.GothamBold
+    notificationTitle.TextSize = 16
+    notificationTitle.TextXAlignment = Enum.TextXAlignment.Left
+    notificationTitle.Parent = content
+
+    -- Notification message
+    local notificationMessage = Instance.new("TextLabel")
+    notificationMessage.Name = "NotificationMessage"
+    notificationMessage.Size = UDim2.new(1, -5, 0, 30)
+    notificationMessage.Position = UDim2.new(0, 5, 0, 35)
+    notificationMessage.BackgroundTransparency = 1
+    notificationMessage.Text = message
+    notificationMessage.TextColor3 = currentTheme.TextColor
+    notificationMessage.Font = Enum.Font.Gotham
+    notificationMessage.TextSize = 14
+    notificationMessage.TextXAlignment = Enum.TextXAlignment.Left
+    notificationMessage.TextWrapped = true
+    notificationMessage.Parent = content
+
+    -- Close button
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Size = UDim2.new(0, 20, 0, 20)
+    closeButton.Position = UDim2.new(1, -25, 0, 10)
+    closeButton.BackgroundTransparency = 1
+    closeButton.Text = "×"
+    closeButton.TextColor3 = currentTheme.TextColor
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.TextSize = 18
+    closeButton.BorderSizePixel = 0
+    closeButton.Parent = notification
+
+    -- Slide in animation
+    TweenService:Create(notification, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
+        Position = UDim2.new(1, -320, 0, 20 + (#notificationQueue * 90))
+    }):Play()
+
+    -- Add to queue
+    table.insert(notificationQueue, notification)
+
+    -- Remove function
+    local function removeNotification()
+        for i, notif in ipairs(notificationQueue) do
+            if notif == notification then
+                table.remove(notificationQueue, i)
+                break
+            end
+        end
+        
+        -- Slide out animation
+        TweenService:Create(notification, TweenInfo.new(0.3), {Position = UDim2.new(1, 20, 0, notification.Position.Y.Offset)}):Play()
+        
+        -- Remove after animation
+        Debris:AddItem(notification, 0.3)
+        
+        -- Update positions of remaining notifications
+        for i, notif in ipairs(notificationQueue) do
+            TweenService:Create(notif, TweenInfo.new(0.3), {Position = UDim2.new(1, -320, 0, 20 + ((i - 1) * 90))}):Play()
+        end
+    end
+
+    -- Auto-remove after duration
+    task.spawn(function()
+        task.wait(duration)
+        removeNotification()
+    end)
+
+    -- Manual close
+    closeButton.MouseButton1Click:Connect(removeNotification)
+
+    -- Remove old notifications if too many
+    if #notificationQueue > maxNotifications then
+        local oldNotification = notificationQueue[1]
+        table.remove(notificationQueue, 1)
+        oldNotification:Destroy()
+    end
+end
+
+-- Tooltip/Info creation
+function AstroHubV2:CreateTooltip(targetElement, tooltipText)
+    if not targetElement then
+        warn("AstroHubV2: CreateTooltip requires a valid target element.")
+        return nil
+    end
+
+    local tooltip = Instance.new("Frame")
+    tooltip.Name = "Tooltip"
+    tooltip.Size = UDim2.new(0, 200, 0, 30)
+    tooltip.BackgroundColor3 = currentTheme.ElementBackground
+    tooltip.BorderSizePixel = 0
+    tooltip.Visible = false
+    tooltip.Parent = MainWindow or targetElement.Parent
+
+    createUICorner(tooltip, 6)
+    createUIStroke(tooltip, 1, currentTheme.Divider, 0.5)
+    
+    if currentTheme == themes.Space then
+        createShadow(tooltip, 10, 0.8)
+    end
+
+    local tooltipLabel = Instance.new("TextLabel")
+    tooltipLabel.Name = "TooltipLabel"
+    tooltipLabel.Size = UDim2.new(1, -10, 1, 0)
+    tooltipLabel.Position = UDim2.new(0, 5, 0, 0)
+    tooltipLabel.BackgroundTransparency = 1
+    tooltipLabel.Text = tooltipText
+    tooltipLabel.TextColor3 = currentTheme.TextColor
+    tooltipLabel.Font = Enum.Font.Gotham
+    tooltipLabel.TextSize = 12
+    tooltipLabel.TextWrapped = true
+    tooltipLabel.Parent = tooltip
+
+    -- Adjust size based on text
+    local textBounds = tooltipLabel.TextBounds
+    tooltip.Size = UDim2.new(0, math.min(textBounds.X + 20, 300), 0, textBounds.Y + 10)
+
+    targetElement.MouseEnter:Connect(function()
+        local mouse = LocalPlayer:GetMouse()
+        tooltip.Position = UDim2.new(0, mouse.X + 10, 0, mouse.Y + 10)
+        tooltip.Visible = true
+        
+        TweenService:Create(tooltip, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+        TweenService:Create(tooltipLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+    end)
+
+    targetElement.MouseLeave:Connect(function()
+        tooltip.Visible = false
+    end)
+
+    targetElement.MouseMoved:Connect(function()
+        if tooltip.Visible then
+            local mouse = LocalPlayer:GetMouse()
+            tooltip.Position = UDim2.new(0, mouse.X + 10, 0, mouse.Y + 10)
+        end
+    end)
+
+    return tooltip
+end
+
+-- Toggle Group (Radio Style)
+function AstroHubV2:CreateToggleGroup(parentSection, text, options, defaultOption, callback)
+    if not parentSection or not parentSection:IsA("Frame") then
+        warn("AstroHubV2: CreateToggleGroup requires a valid parent section frame.")
+        return nil
+    end
+
+    local groupFrame = Instance.new("Frame")
+    groupFrame.Name = text .. "_ToggleGroup"
+    groupFrame.Size = UDim2.new(1, -10, 0, 30 + (#options * 30))
+    groupFrame.BackgroundColor3 = currentTheme.ElementBackground
+    groupFrame.BorderSizePixel = 0
+    groupFrame.Parent = parentSection
+
+    createUICorner(groupFrame, 6)
+    createUIPadding(groupFrame, 10)
+
+    -- Group label
+    local groupLabel = Instance.new("TextLabel")
+    groupLabel.Name = "GroupLabel"
+    groupLabel.Size = UDim2.new(1, 0, 0, 20)
+    groupLabel.Position = UDim2.new(0, 0, 0, 0)
+    groupLabel.BackgroundTransparency = 1
+    groupLabel.Text = text
+    groupLabel.TextColor3 = currentTheme.TextColor
+    groupLabel.Font = Enum.Font.GothamBold
+    groupLabel.TextSize = 14
+    groupLabel.TextXAlignment = Enum.TextXAlignment.Left
+    groupLabel.Parent = groupFrame
+
+    local currentOption = defaultOption or options[1]
+    local radioButtons = {}
+
+    -- Create radio buttons
+    for i, option in ipairs(options) do
+        local radioFrame = Instance.new("Frame")
+        radioFrame.Name = option .. "_Radio"
+        radioFrame.Size = UDim2.new(1, 0, 0, 25)
+        radioFrame.Position = UDim2.new(0, 0, 0, 20 + ((i - 1) * 28))
+        radioFrame.BackgroundTransparency = 1
+        radioFrame.Parent = groupFrame
+
+        -- Radio button
+        local radioButton = Instance.new("Frame")
+        radioButton.Name = "RadioButton"
+        radioButton.Size = UDim2.new(0, 18, 0, 18)
+        radioButton.Position = UDim2.new(0, 0, 0.5, -9)
+        radioButton.BackgroundColor3 = currentTheme.ElementBackground
+        radioButton.BorderSizePixel = 0
+        radioButton.Parent = radioFrame
+
+        createUICorner(radioButton, 9)
+        createUIStroke(radioButton, 2, currentTheme.Divider)
+
+        -- Radio indicator
+        local radioIndicator = Instance.new("Frame")
+        radioIndicator.Name = "RadioIndicator"
+        radioIndicator.Size = UDim2.new(0, 10, 0, 10)
+        radioIndicator.Position = UDim2.new(0.5, -5, 0.5, -5)
+        radioIndicator.BackgroundColor3 = currentTheme.AccentColor
+        radioIndicator.BorderSizePixel = 0
+        radioIndicator.Visible = option == currentOption
+        radioIndicator.Parent = radioButton
+
+        createUICorner(radioIndicator, 5)
+
+        -- Radio label
+        local radioLabel = Instance.new("TextLabel")
+        radioLabel.Name = "RadioLabel"
+        radioLabel.Size = UDim2.new(1, -25, 1, 0)
+        radioLabel.Position = UDim2.new(0, 25, 0, 0)
+        radioLabel.BackgroundTransparency = 1
+        radioLabel.Text = option
+        radioLabel.TextColor3 = currentTheme.TextColor
+        radioLabel.Font = Enum.Font.Gotham
+        radioLabel.TextSize = 14
+        radioLabel.TextXAlignment = Enum.TextXAlignment.Left
+        radioLabel.Parent = radioFrame
+
+        -- Click handler
+        local clickButton = Instance.new("TextButton")
+        clickButton.Name = "ClickHandler"
+        clickButton.Size = UDim2.new(1, 0, 1, 0)
+        clickButton.BackgroundTransparency = 1
+        clickButton.Text = ""
+        clickButton.Parent = radioFrame
+
+        radioButtons[option] = radioIndicator
+
+        clickButton.MouseButton1Click:Connect(function()
+            if currentOption ~= option then
+                -- Hide all indicators
+                for _, indicator in pairs(radioButtons) do
+                    indicator.Visible = false
+                end
+                
+                -- Show selected indicator
+                radioIndicator.Visible = true
+                currentOption = option
+                
+                if callback then
+                    callback(option)
+                end
+                
+                flags[text] = option
+                debugLog("Toggle group '" .. text .. "' selected: " .. option)
+            end
+        end)
+    end
+
+    -- Return object with methods
+    return {
+        Set = function(self, option)
+            if radioButtons[option] then
+                -- Hide all indicators
+                for _, indicator in pairs(radioButtons) do
+                    indicator.Visible = false
+                end
+                
+                -- Show selected indicator
+                radioButtons[option].Visible = true
+                currentOption = option
+                flags[text] = option
+            end
+        end,
+        Get = function(self)
+            return currentOption
+        end,
+        Show = function(self)
+            groupFrame.Visible = true
+        end,
+        Hide = function(self)
+            groupFrame.Visible = false
+        end
+    }
+end
+
+-- Search Bar
+function AstroHubV2:CreateSearchBar(parentTabContent, placeholder, callback)
+    if not parentTabContent or not parentTabContent:IsA("ScrollingFrame") then
+        warn("AstroHubV2: CreateSearchBar requires a valid parent tab content frame.")
+        return nil
+    end
+
+    local searchFrame = Instance.new("Frame")
+    searchFrame.Name = "SearchBar"
+    searchFrame.Size = UDim2.new(1, -10, 0, 35)
+    searchFrame.BackgroundColor3 = currentTheme.ElementBackground
+    searchFrame.BorderSizePixel = 0
+    searchFrame.Parent = parentTabContent
+
+    createUICorner(searchFrame, 6)
+    createUIPadding(searchFrame, 8)
+
+    -- Search icon
+    local searchIcon = Instance.new("TextLabel")
+    searchIcon.Name = "SearchIcon"
+    searchIcon.Size = UDim2.new(0, 20, 0, 20)
+    searchIcon.Position = UDim2.new(0, 0, 0.5, -10)
+    searchIcon.BackgroundTransparency = 1
+    searchIcon.Text = "🔍"
+    searchIcon.TextColor3 = currentTheme.TextColor
+    searchIcon.Font = Enum.Font.Gotham
+    searchIcon.TextSize = 14
+    searchIcon.Parent = searchFrame
+
+    -- Search input
+    local searchInput = Instance.new("TextBox")
+    searchInput.Name = "SearchInput"
+    searchInput.Size = UDim2.new(1, -30, 1, 0)
+    searchInput.Position = UDim2.new(0, 25, 0, 0)
+    searchInput.BackgroundTransparency = 1
+    searchInput.Text = ""
+    searchInput.TextColor3 = currentTheme.TextColor
+    searchInput.Font = Enum.Font.Gotham
+    searchInput.TextSize = 14
+    searchInput.TextXAlignment = Enum.TextXAlignment.Left
+    searchInput.PlaceholderText = placeholder or "Search..."
+    searchInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+    searchInput.ClearTextOnFocus = false
+    searchInput.Parent = searchFrame
+
+    local debounceTimer = nil
+
+    searchInput:GetPropertyChangedSignal("Text"):Connect(function()
+        searchQuery = searchInput.Text
+        
+        -- Debounce search
+        if debounceTimer then
+            debounceTimer:Disconnect()
+        end
+        
+        debounceTimer = RunService.Heartbeat:Wait()
+        
+        if callback then
+            callback(searchQuery)
+        end
+        
+        -- Filter elements in parent tab
+        for _, element in ipairs(parentTabContent:GetChildren()) do
+            if element:IsA("Frame") and element ~= searchFrame then
+                local shouldShow = searchQuery == "" or element.Name:lower():find(searchQuery:lower())
+                element.Visible = shouldShow
+            end
+        end
+    end)
+
+    return searchInput
+end
+
+-- Loading Overlay
+function AstroHubV2:CreateLoadingOverlay(text)
+    if loadingOverlay then
+        loadingOverlay:Destroy()
+    end
+
+    loadingOverlay = Instance.new("Frame")
+    loadingOverlay.Name = "LoadingOverlay"
+    loadingOverlay.Size = UDim2.new(1, 0, 1, 0)
+    loadingOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    loadingOverlay.BackgroundTransparency = 0.5
+    loadingOverlay.BorderSizePixel = 0
+    loadingOverlay.ZIndex = 999
+    loadingOverlay.Parent = MainWindow or PlayerGui
+
+    local loadingFrame = Instance.new("Frame")
+    loadingFrame.Name = "LoadingFrame"
+    loadingFrame.Size = UDim2.new(0, 200, 0, 100)
+    loadingFrame.Position = UDim2.new(0.5, -100, 0.5, -50)
+    loadingFrame.BackgroundColor3 = currentTheme.ElementBackground
+    loadingFrame.BorderSizePixel = 0
+    loadingFrame.Parent = loadingOverlay
+
+    createUICorner(loadingFrame, 8)
+    
+    if currentTheme == themes.Space then
+        createShadow(loadingFrame, 20, 0.6)
+    end
+
+    -- Loading spinner
+    local spinner = Instance.new("ImageLabel")
+    spinner.Name = "Spinner"
+    spinner.Size = UDim2.new(0, 40, 0, 40)
+    spinner.Position = UDim2.new(0.5, -20, 0.3, -20)
+    spinner.BackgroundTransparency = 1
+    spinner.Image = "rbxassetid://4965945816" -- Circular loading icon
+    spinner.ImageColor3 = currentTheme.AccentColor
+    spinner.Parent = loadingFrame
+
+    -- Spin animation
+    local spinAnimation = TweenService:Create(spinner, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1), {
+        Rotation = 360
+    })
+    spinAnimation:Play()
+
+    -- Loading text
+    local loadingText = Instance.new("TextLabel")
+    loadingText.Name = "LoadingText"
+    loadingText.Size = UDim2.new(1, -20, 0, 20)
+    loadingText.Position = UDim2.new(0, 10, 0.7, 0)
+    loadingText.BackgroundTransparency = 1
+    loadingText.Text = text or "Loading..."
+    loadingText.TextColor3 = currentTheme.TextColor
+    loadingText.Font = Enum.Font.Gotham
+    loadingText.TextSize = 14
+    loadingText.Parent = loadingFrame
+
+    -- Hide function
+    local function hideLoading()
+        if loadingOverlay then
+            TweenService:Create(loadingOverlay, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+            task.wait(0.3)
+            loadingOverlay:Destroy()
+            loadingOverlay = nil
+        end
+    end
+
+    return loadingOverlay, hideLoading
+end
+
+-- Debug Console
+function AstroHubV2:CreateDebugConsole(parentTabContent)
+    if not parentTabContent or not parentTabContent:IsA("ScrollingFrame") then
+        warn("AstroHubV2: CreateDebugConsole requires a valid parent tab content frame.")
+        return nil
+    end
+
+    local consoleFrame = Instance.new("Frame")
+    consoleFrame.Name = "DebugConsole"
+    consoleFrame.Size = UDim2.new(1, -10, 0, 200)
+    consoleFrame.BackgroundColor3 = currentTheme.ElementBackground
+    consoleFrame.BorderSizePixel = 0
+    consoleFrame.Parent = parentTabContent
+
+    createUICorner(consoleFrame, 6)
+    createUIPadding(consoleFrame, 10)
+
+    -- Console header
+    local consoleHeader = Instance.new("TextLabel")
+    consoleHeader.Name = "ConsoleHeader"
+    consoleHeader.Size = UDim2.new(1, -40, 0, 20)
+    consoleHeader.BackgroundTransparency = 1
+    consoleHeader.Text = "Debug Console"
+    consoleHeader.TextColor3 = currentTheme.TextColor
+    consoleHeader.Font = Enum.Font.GothamBold
+    consoleHeader.TextSize = 14
+    consoleHeader.TextXAlignment = Enum.TextXAlignment.Left
+    consoleHeader.Parent = consoleFrame
+
+    -- Clear button
+    local clearButton = Instance.new("TextButton")
+    clearButton.Name = "ClearButton"
+    clearButton.Size = UDim2.new(0, 40, 0, 20)
+    clearButton.Position = UDim2.new(1, -40, 0, 0)
+    clearButton.BackgroundColor3 = currentTheme.AccentColor
+    clearButton.Text = "Clear"
+    clearButton.TextColor3 = currentTheme == themes.Manga and Color3.fromRGB(255, 255, 255) or currentTheme.TextColor
+    clearButton.Font = Enum.Font.Gotham
+    clearButton.TextSize = 12
+    clearButton.BorderSizePixel = 0
+    clearButton.Parent = consoleFrame
+
+    createUICorner(clearButton, 4)
+    animateHover(clearButton, currentTheme.ButtonHover, currentTheme.AccentColor)
+
+    -- Console output
+    local consoleOutput = Instance.new("ScrollingFrame")
+    consoleOutput.Name = "ConsoleOutput"
+    consoleOutput.Size = UDim2.new(1, 0, 1, -30)
+    consoleOutput.Position = UDim2.new(0, 0, 0, 25)
+    consoleOutput.BackgroundColor3 = currentTheme.InputBackground
+    consoleOutput.BorderSizePixel = 0
+    consoleOutput.ScrollBarThickness = 4
+    consoleOutput.ScrollBarImageColor3 = currentTheme.AccentColor
+    consoleOutput.CanvasSize = UDim2.new(0, 0, 0, 0)
+    consoleOutput.Parent = consoleFrame
+
+    createUICorner(consoleOutput, 4)
+    createUIListLayout(consoleOutput, Enum.FillDirection.Vertical, Enum.HorizontalAlignment.Left, 2)
+    createUIPadding(consoleOutput, 5)
+
+    debugConsole = consoleOutput
+
+    -- Update function
+    function AstroHubV2:UpdateDebugConsole()
+        if not debugConsole then return end
+        
+        -- Clear existing logs
+        for _, child in ipairs(debugConsole:GetChildren()) do
+            if child:IsA("TextLabel") then
+                child:Destroy()
+            end
+        end
+        
+        -- Add logs
+        for _, log in ipairs(debugLogs) do
+            local logLabel = Instance.new("TextLabel")
+            logLabel.Size = UDim2.new(1, -10, 0, 16)
+            logLabel.BackgroundTransparency = 1
+            logLabel.Text = "[" .. log.time .. "] " .. log.message
+            logLabel.TextColor3 = currentTheme.TextColor
+            logLabel.Font = Enum.Font.Code
+            logLabel.TextSize = 12
+            logLabel.TextXAlignment = Enum.TextXAlignment.Left
+            logLabel.TextWrapped = true
+            logLabel.Parent = debugConsole
+        end
+        
+        -- Update canvas size
+        local layout = debugConsole:FindFirstChild("UIListLayout")
+        if layout then
+            debugConsole.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
+            debugConsole.CanvasPosition = Vector2.new(0, layout.AbsoluteContentSize.Y)
+        end
+    end
+
+    clearButton.MouseButton1Click:Connect(function()
+        debugLogs = {}
+        self:UpdateDebugConsole()
+    end)
+
+    -- Initial update
+    self:UpdateDebugConsole()
+
+    return consoleFrame
+end
+
+-- Clear Structure
+function AstroHubV2:ClearStructure(uiElement)
+    if not uiElement then
+        warn("AstroHubV2: ClearStructure requires a valid UI element.")
+        return
+    end
+
+    for _, child in ipairs(uiElement:GetChildren()) do
+        if not child:IsA("UIListLayout") and not child:IsA("UIPadding") and not child:IsA("UICorner") then
+            child:Destroy()
+        end
+    end
+
+    debugLog("Cleared structure of: " .. uiElement.Name)
+end
+
+-- Minimize/Restore functions
+function AstroHubV2:MinimizeGUI()
+    if not MainWindow or not MainFrame then return end
+    
+    if isMinimized then
+        -- Restore
+        MainFrame.Visible = true
+        
+        if minimizeIcon then
+            minimizeIcon:Destroy()
+            minimizeIcon = nil
+        end
+        
+        isMinimized = false
+    else
+        -- Minimize
+        MainFrame.Visible = false
+        
+        -- Create minimize icon
+        minimizeIcon = Instance.new("ImageButton")
+        minimizeIcon.Name = "MinimizeIcon"
+        minimizeIcon.Size = UDim2.new(0, 60, 0, 60)
+        minimizeIcon.Position = UDim2.new(0, 20, 0, 20)
+        minimizeIcon.BackgroundColor3 = currentTheme.ElementBackground
+        minimizeIcon.Image = logoAssetId
+        minimizeIcon.ImageColor3 = currentTheme.AccentColor
+        minimizeIcon.BorderSizePixel = 0
+        minimizeIcon.Parent = MainWindow
+
+        createUICorner(minimizeIcon, 30)
+        
+        if currentTheme == themes.Space then
+            createShadow(minimizeIcon, 15, 0.6)
+        else
+            createUIStroke(minimizeIcon, 2, currentTheme.AccentColor)
+        end
+
+        animateHover(minimizeIcon, currentTheme.ButtonHover, currentTheme.ElementBackground)
+
+        minimizeIcon.MouseButton1Click:Connect(function()
+            self:MinimizeGUI()
+        end)
+        
+        isMinimized = true
+    end
+end
+
+-- Destroy GUI
+function AstroHubV2:DestroyGUI()
+    debugLog("Destroying GUI...")
+    
+    if MainWindow then
+        MainWindow:Destroy()
+        MainWindow = nil
+        MainFrame = nil
+        TabContainer = nil
+        TabContentContainer = nil
+        Tabs = {}
+        activeTab = nil
+        isMinimized = false
+        
+        -- Clear notifications
+        for _, notification in ipairs(notificationQueue) do
+            notification:Destroy()
+        end
+        notificationQueue = {}
+        
+        -- Disconnect hotkey
+        if hotkeyConnection then
+            hotkeyConnection:Disconnect()
+            hotkeyConnection = nil
+        end
+        
+        -- Remove blur effect
+        if blurEffect then
+            blurEffect:Destroy()
+            blurEffect = nil
+        end
+        
+        -- Clear debug logs
+        debugLogs = {}
+        debugConsole = nil
+        
+        -- Clear loading overlay
+        if loadingOverlay then
+            loadingOverlay:Destroy()
+            loadingOverlay = nil
+        end
+    end
+end
+
+-- Hotkey system
+function AstroHubV2:SetHotkey(keyCode)
+    if hotkeyConnection then
+        hotkeyConnection:Disconnect()
+    end
+    
+    currentHotkey = keyCode
+    hotkeyConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
+        if input.KeyCode == keyCode then
+            if MainWindow then
+                MainWindow.Enabled = not MainWindow.Enabled
+                debugLog("GUI visibility toggled via hotkey: " .. keyCode.Name)
+            end
+        end
+    end)
+    
+    debugLog("Hotkey set to: " .. keyCode.Name)
+end
+
+-- Blur effect
+function AstroHubV2:SetBlurEffect(enabled)
+    if enabled then
+        if not blurEffect then
+            blurEffect = Instance.new("BlurEffect")
+            blurEffect.Size = 20
+            blurEffect.Parent = Lighting
+            
+            -- Animate blur in
+            TweenService:Create(blurEffect, TweenInfo.new(0.5), {Size = 20}):Play()
+        end
+    else
+        if blurEffect then
+            -- Animate blur out
+            TweenService:Create(blurEffect, TweenInfo.new(0.5), {Size = 0}):Play()
+            task.wait(0.5)
+            blurEffect:Destroy()
+            blurEffect = nil
+        end
+    end
+    
+    debugLog("Blur effect " .. (enabled and "enabled" or "disabled"))
+end
+
+-- Flag system
+function AstroHubV2:SetFlag(flagName, value)
+    flags[flagName] = value
+end
+
+function AstroHubV2:GetFlag(flagName)
+    return flags[flagName]
+end
+
+function AstroHubV2:GetAllFlags()
+    return flags
+end
+
+-- Callback system
+function AstroHubV2:RegisterCallback(eventName, callback)
+    if not callbacks[eventName] then
+        callbacks[eventName] = {}
+    end
+    table.insert(callbacks[eventName], callback)
+end
+
+function AstroHubV2:TriggerCallback(eventName, ...)
+    if callbacks[eventName] then
+        for _, callback in ipairs(callbacks[eventName]) do
+            task.spawn(callback, ...)
+        end
+    end
+end
+
+-- Set title
+function AstroHubV2:SetTitle(newTitle)
+    if MainFrame then
+        local titleLabel = MainFrame:FindFirstChild("TitleBar"):FindFirstChild("TitleLabel")
+        if titleLabel then
+            titleLabel.Text = newTitle
+        end
+    end
+end
+
+-- Get environment support
+if getgenv then
+    getgenv().AstroHubV2 = AstroHubV2
+end
+
+-- Return the library
+return AstroHubV2
