@@ -1004,6 +1004,16 @@ function Window:GetTabMethods()
             dropdownList.ScrollBarImageColor3 = Theme.Accent
             dropdownList.CanvasSize = UDim2.new(0, 0, 0, 0)
             dropdownList.Parent = dropdownListContainer
+
+            local function UpdateDropdownPosition()
+            local absolutePos = dropdownFrame.AbsolutePosition
+            local absoluteSize = dropdownFrame.AbsoluteSize
+            dropdownListContainer.Position = UDim2.new(0, absolutePos.X, 0, absolutePos.Y + absoluteSize.Y)
+            dropdownListContainer.Size = UDim2.new(0, absoluteSize.X, 0, 0)
+            end
+
+            dropdownFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateDropdownPosition)
+            dropdownFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdateDropdownPosition)
             
             CreateCorner(dropdownList, UDim.new(0, 6))
             CreateStroke(dropdownList, Theme.BorderAccent, 0.5)
@@ -1076,8 +1086,8 @@ function Window:GetTabMethods()
             -- Toggle dropdown
             dropdownButton.MouseButton1Click:Connect(function()
                 isOpen = not isOpen
-                
-                if isOpen then
+                if isOpen then 
+                        UpdateDropdownPosition()
                     dropdownList.Visible = true
                     local targetSize = math.min(listLayout.AbsoluteContentSize.Y + 8, 100) -- Max 100px height
                     CreateTween(dropdownArrow, {Rotation = 180}):Play()
