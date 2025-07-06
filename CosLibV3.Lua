@@ -41,9 +41,9 @@ local MINIMIZE_ICON_SIZE = UDim2.new(0, 40, 0, 40)
 local Theme = {
     -- Main Colors (Purple Space Theme)
     Background = Color3.fromRGB(13, 13, 20), -- Deep space black
-    BackgroundTransparency = 1, -- Added transparency
+    BackgroundTransparency = 0.2, -- Added transparency
     Secondary = Color3.fromRGB(25, 23, 35), -- Dark purple space
-    SecondaryTransparency = 1, -- Added transparency
+    SecondaryTransparency = 0.2, -- Added transparency
     Accent = Color3.fromRGB(88, 82, 185), -- Cosmic purple
     AccentHover = Color3.fromRGB(107, 99, 212), -- Lighter cosmic purple
     AccentActive = Color3.fromRGB(139, 92, 246), -- Bright purple
@@ -513,7 +513,7 @@ function Window:CreateTab(name, icon)
     local tabButton = Instance.new("TextButton")
     tabButton.Name = name .. "Tab"
     tabButton.Size = UDim2.new(1, 0, 0, 40) -- Increased height for better appearance
-    tabButton.BackgroundTransparency = 1 -- Slightly darker for inactive
+    tabButton.BackgroundTransparency = 0.2 -- Slightly darker for inactive
     tabButton.BorderSizePixel = 0
     tabButton.Text = tab.Icon .. "  " .. name
     tabButton.TextColor3 = Theme.TextSecondary
@@ -562,13 +562,13 @@ function Window:CreateTab(name, icon)
     -- Hover effects
     tabButton.MouseEnter:Connect(function()
         if not tab.Active then
-            CreateTween(tabButton, {BackgroundTransparency = 0.5}):Play()
+            CreateTween(tabButton, {BackgroundTransparency = 0.2}):Play()
         end
     end)
     
     tabButton.MouseLeave:Connect(function()
         if not tab.Active then
-            CreateTween(tabButton, {BackgroundTransparency = 1}):Play()
+            CreateTween(tabButton, {BackgroundTransparency = 0.2}):Play()
         end
     end)
     
@@ -587,7 +587,7 @@ function Window:SelectTab(targetTab)
         tab.Active = false
         tab.Frame.Visible = false
         CreateTween(tab.Button, {
-            BackgroundTransparency = 1, -- Inactive tab background
+            BackgroundTransparency = 0.2, -- Inactive tab background
             TextColor3 = Theme.TextSecondary
         }):Play()
     end
