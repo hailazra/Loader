@@ -277,7 +277,7 @@ function CosmicUI:CreateWindow(config)
     window.MainFrame.Name = "MainFrame"
     window.MainFrame.Size = WINDOW_SIZE
     window.MainFrame.Position = UDim2.new(0.5, -WINDOW_SIZE.X.Offset/2, 0.5, -WINDOW_SIZE.Y.Offset/2)
-    window.MainFrame.BackgroundTransparency = 0.2
+    window.MainFrame.BackgroundTransparency = Theme.BackgroundTransparency
     window.MainFrame.BorderSizePixel = 0
     window.MainFrame.ClipsDescendants = true
     window.MainFrame.Parent = window.ScreenGui
