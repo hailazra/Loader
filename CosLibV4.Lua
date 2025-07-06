@@ -293,7 +293,7 @@ function CosmicUI:CreateWindow(config)
     window.TitleBar.Size = UDim2.new(1, 0, 0, 35) -- Smaller title bar
     window.TitleBar.Position = UDim2.new(0, 0, 0, 0)
     window.TitleBar.BackgroundColor3 = Theme.Secondary
-    window.TitleBar.BackgroundTransparency = 0.1
+    window.TitleBar.BackgroundTransparency = 1
     window.TitleBar.BorderSizePixel = 0
     window.TitleBar.Parent = window.MainFrame
     
@@ -348,7 +348,7 @@ function CosmicUI:CreateWindow(config)
     window.Sidebar.Name = "Sidebar"
     window.Sidebar.Size = UDim2.new(0, SIDEBAR_WIDTH, 1, -35) -- Adjusted for smaller title bar
     window.Sidebar.Position = UDim2.new(0, 0, 0, 35)
-    window.Sidebar.BackgroundTransparency = 0.1
+    window.Sidebar.BackgroundTransparency = 1
     window.Sidebar.BorderSizePixel = 0
     window.Sidebar.Parent = window.MainFrame
     
