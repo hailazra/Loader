@@ -41,7 +41,9 @@ local MINIMIZE_ICON_SIZE = UDim2.new(0, 40, 0, 40)
 local Theme = {
     -- Main Colors (Purple Space Theme)
     Background = Color3.fromRGB(13, 13, 20), -- Deep space black
+    BackgroundTransparency = 0.2, -- Added transparency
     Secondary = Color3.fromRGB(25, 23, 35), -- Dark purple space
+    SecondaryTransparency = 0.2, -- Added transparency
     Accent = Color3.fromRGB(88, 82, 185), -- Cosmic purple
     AccentHover = Color3.fromRGB(107, 99, 212), -- Lighter cosmic purple
     AccentActive = Color3.fromRGB(139, 92, 246), -- Bright purple
@@ -275,7 +277,7 @@ function CosmicUI:CreateWindow(config)
     window.MainFrame.Name = "MainFrame"
     window.MainFrame.Size = WINDOW_SIZE
     window.MainFrame.Position = UDim2.new(0.5, -WINDOW_SIZE.X.Offset/2, 0.5, -WINDOW_SIZE.Y.Offset/2)
-    window.MainFrame.BackgroundColor3 = Theme.Background
+    window.MainFrame.BackgroundTransparency = Theme.BackgroundTransparency
     window.MainFrame.BorderSizePixel = 0
     window.MainFrame.ClipsDescendants = true
     window.MainFrame.Parent = window.ScreenGui
@@ -345,7 +347,7 @@ function CosmicUI:CreateWindow(config)
     window.Sidebar.Name = "Sidebar"
     window.Sidebar.Size = UDim2.new(0, SIDEBAR_WIDTH, 1, -35) -- Adjusted for smaller title bar
     window.Sidebar.Position = UDim2.new(0, 0, 0, 35)
-    window.Sidebar.BackgroundColor3 = Theme.Secondary
+    window.Sidebar.BackgroundTransparency = Theme.SecondaryTransparency
     window.Sidebar.BorderSizePixel = 0
     window.Sidebar.Parent = window.MainFrame
     
@@ -510,19 +512,21 @@ function Window:CreateTab(name, icon)
     -- Create tab button
     local tabButton = Instance.new("TextButton")
     tabButton.Name = name .. "Tab"
-    tabButton.Size = UDim2.new(1, 0, 0, 30) -- Smaller tab button
-    tabButton.BackgroundColor3 = Theme.Surface
+    tabButton.Size = UDim2.new(1, 0, 0, 40) -- Increased height for better appearance
+    tabButton.BackgroundColor3 = Color3.fromRGB(30, 28, 45) -- Slightly darker for inactive
     tabButton.BorderSizePixel = 0
     tabButton.Text = tab.Icon .. "  " .. name
     tabButton.TextColor3 = Theme.TextSecondary
-    tabButton.TextSize = 11 -- Smaller font
+    tabButton.TextSize = 14 -- Increased font size
     tabButton.Font = Enum.Font.GothamSemibold
     tabButton.TextXAlignment = Enum.TextXAlignment.Left
+    tabButton.TextScaled = true
+    tabButton.TextWrapped = true
     tabButton.LayoutOrder = #self.Tabs + 1
     tabButton.Parent = self.Sidebar
-    
-    CreateCorner(tabButton, UDim.new(0, 6))
-    CreatePadding(tabButton, UDim.new(0, 8)) -- Reduced padding
+
+    CreateCorner(tabButton, UDim.new(0, 8)) -- More rounded corners
+    CreatePadding(tabButton, UDim.new(0, 10)) -- Increased padding
     
     -- Create tab content frame
     local tabFrame = Instance.new("ScrollingFrame")
@@ -558,13 +562,13 @@ function Window:CreateTab(name, icon)
     -- Hover effects
     tabButton.MouseEnter:Connect(function()
         if not tab.Active then
-            CreateTween(tabButton, {BackgroundColor3 = Theme.SurfaceHover}):Play()
+            CreateTween(tabButton, {BackgroundColor3 = Color3.fromRGB(40, 38, 55)}):Play()
         end
     end)
     
     tabButton.MouseLeave:Connect(function()
         if not tab.Active then
-            CreateTween(tabButton, {BackgroundColor3 = Theme.Surface}):Play()
+            CreateTween(tabButton, {BackgroundColor3 = Color3.fromRGB(30, 28, 45)}):Play()
         end
     end)
     
@@ -583,7 +587,7 @@ function Window:SelectTab(targetTab)
         tab.Active = false
         tab.Frame.Visible = false
         CreateTween(tab.Button, {
-            BackgroundColor3 = Theme.Surface,
+            BackgroundColor3 = Color3.fromRGB(40, 38, 55), -- Inactive tab background
             TextColor3 = Theme.TextSecondary
         }):Play()
     end
@@ -990,7 +994,7 @@ function Window:GetTabMethods()
             dropdownListContainer.BackgroundTransparency = 1
             dropdownListContainer.ClipsDescendants = false
             dropdownListContainer.ZIndex = 100 -- High z-index to appear above other elements
-            dropdownListContainer.Parent = self.Window.ScreenGui
+            dropdownListContainer.Parent = self.Window.MainFrame
             
             local dropdownList = Instance.new("ScrollingFrame")
             dropdownList.Name = "List"
