@@ -163,16 +163,16 @@ local function CreateListLayout(parent, direction, padding, horizontalAlignment,
 end
 
 local function CreateDropShadow(parent, offset, blur, transparency)
-    offset = offset or Vector2.new(0, 4)
     blur = blur or 8
-    transparency = transparency or 0.5
-    
+    transparency = transparency or 0.85
+    offset = offset or Vector2.new(0, 2)  -- Offset lebih kecil
+
     local shadow = Instance.new("ImageLabel")
     shadow.Name = "DropShadow"
-    shadow.Size = UDim2.new(1, blur * 2, 1, blur * 2)
-    shadow.Position = UDim2.new(0, -blur + offset.X, 0, -blur + offset.Y)
+    shadow.Size = UDim2.new(1, blur, 1, blur)  -- Ukuran lebih kecil
+    shadow.Position = UDim2.new(0, -blur/2 + offset.X, 0, -blur/2 + offset.Y)
     shadow.BackgroundTransparency = 1
-    shadow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+    shadow.Image = "rbxassetid://8992231241"  -- Gradient transparan
     shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
     shadow.ImageTransparency = transparency
     shadow.ScaleType = Enum.ScaleType.Slice
@@ -989,8 +989,8 @@ function Window:GetTabMethods()
             dropdownListContainer.Position = UDim2.new(0, 0, 1, 2)
             dropdownListContainer.BackgroundTransparency = 1
             dropdownListContainer.ClipsDescendants = false
-            dropdownListContainer.ZIndex = 20 -- High z-index to appear above other elements
-            dropdownListContainer.Parent = dropdownFrame
+            dropdownListContainer.ZIndex = 100 -- High z-index to appear above other elements
+            dropdownListContainer.Parent = self.Window.ScreenGui
             
             local dropdownList = Instance.new("ScrollingFrame")
             dropdownList.Name = "List"
@@ -999,7 +999,7 @@ function Window:GetTabMethods()
             dropdownList.BackgroundColor3 = Theme.Surface
             dropdownList.BorderSizePixel = 0
             dropdownList.Visible = false
-            dropdownList.ZIndex = 21 -- Higher than container
+            dropdownList.ZIndex = 101 -- Higher than container
             dropdownList.ScrollBarThickness = 3
             dropdownList.ScrollBarImageColor3 = Theme.Accent
             dropdownList.CanvasSize = UDim2.new(0, 0, 0, 0)
