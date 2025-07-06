@@ -292,7 +292,7 @@ function CosmicUI:CreateWindow(config)
     window.TitleBar.Name = "TitleBar"
     window.TitleBar.Size = UDim2.new(1, 0, 0, 35) -- Smaller title bar
     window.TitleBar.Position = UDim2.new(0, 0, 0, 0)
-    window.TitleBar.BackgroundTransparancy = 1
+    window.TitleBar.BackgroundColor3 = Theme.Secondary
     window.TitleBar.BorderSizePixel = 0
     window.TitleBar.Parent = window.MainFrame
     
