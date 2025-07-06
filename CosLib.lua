@@ -402,16 +402,6 @@ function Window:MakeDraggable()
     local dragging = false
     local dragStart = nil
     local startPos = nil
-           
-    local function updateDrag(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            local newPos = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
             CreateTween(self.MainFrame, {Position = newPos}, AnimationSettings.Fast):Play()
         end
     end
