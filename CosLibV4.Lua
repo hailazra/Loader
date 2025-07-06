@@ -516,6 +516,7 @@ function Window:CreateTab(name, icon)
     local tabButton = Instance.new("TextButton")
     tabButton.Name = name .. "Tab"
     tabButton.Size = UDim2.new(1, 0, 0, 35) -- Increased height for better appearance
+    tabButton.BackgroundColor3 = Color3.new(0, 0, 0) -- Transparan/mengikuti parent
     tabButton.BackgroundTransparency = 0.5 -- Slightly darker for inactive
     tabButton.BorderSizePixel = 0
     tabButton.Text = tab.Icon .. "  " .. name
