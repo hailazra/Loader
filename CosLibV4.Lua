@@ -299,7 +299,8 @@ function CosmicUI:CreateWindow(config)
     
     CreateCorner(window.TitleBar, UDim.new(0, 8))
     CreateStroke(window.TitleBar, Theme.BorderLight, 1, 0.5)
-    
+    CreateGradient(window.TitleBar, Theme.WindowGradient)
+
     -- Title Text
     local titleText = Instance.new("TextLabel")
     titleText.Name = "TitleText"
@@ -354,6 +355,7 @@ function CosmicUI:CreateWindow(config)
     
     CreateGradient(window.Sidebar, Theme.SidebarGradient)
     CreateStroke(window.Sidebar, Theme.BorderLight, 1, 0.5)
+    CreateGradient(window.Sidebar, Theme.WindowGradient)
     CreatePadding(window.Sidebar, UDim.new(0, 8)) -- Reduced padding
     CreateListLayout(window.Sidebar, Enum.FillDirection.Vertical, UDim.new(0, 4)) -- Reduced spacing
     
