@@ -522,7 +522,7 @@ function Window:CreateTab(name, icon)
     tabButton.Text = tab.Icon .. "  " .. name
     tabButton.TextColor3 = Theme.TextSecondary
     tabButton.TextSize = 12 -- Increased font size
-    tabButton.Font = Enum.Font.GothamSemibold
+    tabButton.Font = Enum.Font.GothamBold
     tabButton.TextXAlignment = Enum.TextXAlignment.Left
     tabButton.TextScaled = true
     tabButton.TextWrapped = true
@@ -637,7 +637,7 @@ function Window:GetTabMethods()
             button.Text = config.Name or "Button"
             button.TextColor3 = Theme.Text
             button.TextSize = 11 -- Smaller font
-            button.Font = Enum.Font.GothamSemibold
+            button.Font = Enum.Font.GothamBold
             button.LayoutOrder = #self.Elements + 1
             button.Parent = self.Frame
             
@@ -691,7 +691,7 @@ function Window:GetTabMethods()
             toggleLabel.Text = config.Name or "Toggle"
             toggleLabel.TextColor3 = Theme.Text
             toggleLabel.TextSize = 11 -- Smaller font
-            toggleLabel.Font = Enum.Font.GothamSemibold
+            toggleLabel.Font = Enum.Font.GothamBold
             toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
             toggleLabel.TextYAlignment = Enum.TextYAlignment.Center
             toggleLabel.Parent = toggleFrame
@@ -813,7 +813,7 @@ function Window:GetTabMethods()
             sliderLabel.Text = config.Name or "Slider"
             sliderLabel.TextColor3 = Theme.Text
             sliderLabel.TextSize = 11 -- Smaller font
-            sliderLabel.Font = Enum.Font.GothamSemibold
+            sliderLabel.Font = Enum.Font.GothamBold
             sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
             sliderLabel.Parent = sliderFrame
             
@@ -971,7 +971,7 @@ function Window:GetTabMethods()
             dropdownButton.Text = config.Name or "Dropdown"
             dropdownButton.TextColor3 = Theme.Text
             dropdownButton.TextSize = 11 -- Smaller font
-            dropdownButton.Font = Enum.Font.GothamSemibold
+            dropdownButton.Font = Enum.Font.GothamBold
             dropdownButton.TextXAlignment = Enum.TextXAlignment.Left
             dropdownButton.Parent = dropdownFrame
             
@@ -983,7 +983,7 @@ function Window:GetTabMethods()
             selectedLabel.Text = config.CurrentOption or "Select Option"
             selectedLabel.TextColor3 = Theme.TextSecondary
             selectedLabel.TextSize = 10 -- Smaller font
-            selectedLabel.Font = Enum.Font.Gotham
+            selectedLabel.Font = Enum.Font.GothamBold
             selectedLabel.TextXAlignment = Enum.TextXAlignment.Right
             selectedLabel.Parent = dropdownFrame
             
@@ -1053,7 +1053,7 @@ function Window:GetTabMethods()
                 optionButton.Text = optionText
                 optionButton.TextColor3 = Theme.Text
                 optionButton.TextSize = 10 -- Smaller font
-                optionButton.Font = Enum.Font.Gotham
+                optionButton.Font = Enum.Font.GothamBold
                 optionButton.TextXAlignment = Enum.TextXAlignment.Left
                 optionButton.ZIndex = 22 -- Higher than list
                 optionButton.Parent = dropdownList
@@ -1176,7 +1176,7 @@ function Window:GetTabMethods()
             inputBox.TextColor3 = Theme.Text
             inputBox.PlaceholderColor3 = Theme.TextDisabled
             inputBox.TextSize = 11 -- Smaller font
-            inputBox.Font = Enum.Font.Gotham
+            inputBox.Font = Enum.Font.GothamBold
             inputBox.TextXAlignment = Enum.TextXAlignment.Left
             inputBox.ClearTextOnFocus = false
             inputBox.Parent = inputFrame
@@ -1304,7 +1304,7 @@ function CosmicUI:Notify(config)
     contentLabel.Text = config.Content or "Notification content"
     contentLabel.TextColor3 = Theme.TextSecondary
     contentLabel.TextSize = 12
-    contentLabel.Font = Enum.Font.Gotham
+    contentLabel.Font = Enum.Font.GothamBold
     contentLabel.TextXAlignment = Enum.TextXAlignment.Left
     contentLabel.TextWrapped = true
     contentLabel.Parent = notification
