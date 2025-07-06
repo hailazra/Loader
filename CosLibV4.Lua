@@ -566,13 +566,13 @@ function Window:CreateTab(name, icon)
     -- Hover effects
     tabButton.MouseEnter:Connect(function()
         if not tab.Active then
-            CreateTween(tabButton, {BackgroundColor3 = Theme.AccentHover, BackgroundTransparency = 0.3}):Play()
+            CreateTween(tabButton, {BackgroundTransparency = 0.9}):Play()
         end
     end)
     
     tabButton.MouseLeave:Connect(function()
         if not tab.Active then
-            CreateTween(tabButton, {BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.5}):Play()
+            CreateTween(tabButton, {BackgroundTransparency = 1}):Play()
         end
     end)
     
@@ -591,7 +591,7 @@ function Window:SelectTab(targetTab)
         tab.Active = false
         tab.Frame.Visible = false
         CreateTween(tab.Button, {
-            BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.5, -- Inactive tab background
+            BackgroundTransparency = 1, -- Transparan
             TextColor3 = Theme.TextSecondary
         }):Play()
     end
@@ -599,7 +599,7 @@ function Window:SelectTab(targetTab)
     targetTab.Active = true
     targetTab.Frame.Visible = true
     CreateTween(targetTab.Button, {
-        BackgroundColor3 = Theme.Accent,
+        BackgroundTransparency = 1, -- Tetap transparan
         TextColor3 = Theme.Text
     }):Play()
     
