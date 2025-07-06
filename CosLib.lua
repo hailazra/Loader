@@ -34,7 +34,7 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 
 -- Constants
 local WINDOW_SIZE = UDim2.new(0, 500, 0, 250) -- Mobile friendly size
-local SIDEBAR_WIDTH = 120 -- Smaller sidebar
+local SIDEBAR_WIDTH = 100 -- Smaller sidebar
 local MINIMIZE_ICON_SIZE = UDim2.new(0, 40, 0, 40)
 
 -- Theme Configuration (Purple Space Theme)
@@ -292,7 +292,7 @@ function CosmicUI:CreateWindow(config)
     window.TitleBar.Name = "TitleBar"
     window.TitleBar.Size = UDim2.new(1, 0, 0, 35) -- Smaller title bar
     window.TitleBar.Position = UDim2.new(0, 0, 0, 0)
-    window.TitleBar.BackgroundColor3 = Theme.Secondary
+    window.TitleBar.BackgroundTransparency = Theme.SecondaryTransparency
     window.TitleBar.BorderSizePixel = 0
     window.TitleBar.Parent = window.MainFrame
     
@@ -402,6 +402,69 @@ function Window:MakeDraggable()
     local dragging = false
     local dragStart = nil
     local startPos = nil
+           
+    local function updateDrag(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            local newPos = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+            CreateTween(self.MainFrame, {Position = newPos}, AnimationSettings.Fast):Play()
+        end
+    end
+           
+    self.TitleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = self.MainFrame.Position
+            self.ScreenGui.DisplayOrder = 999
+        end
+    end)
+           
+    UserInputService.InputChanged:Connect(updateDrag)
+           
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+            self.ScreenGui.DisplayOrder = 1
+        end
+    end)
+
+    -- Make MinimizeIcon draggable when minimized
+    if self.MinimizeIcon then
+        self.MinimizeIcon.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = self.MinimizeIcon.Position
+                self.ScreenGui.DisplayOrder = 999
+            end
+        end)
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - dragStart
+                local newPos = UDim2.new(
+                    startPos.X.Scale,
+                    startPos.X.Offset + delta.X,
+                    startPos.Y.Scale,
+                    startPos.Y.Offset + delta.Y
+                )
+                CreateTween(self.MinimizeIcon, {Position = newPos}, AnimationSettings.Fast):Play()
+            end
+        end)
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+                self.ScreenGui.DisplayOrder = 1
+            end
+        end)
+    end
+end
+
     
     self.TitleBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -512,14 +575,14 @@ function Window:CreateTab(name, icon)
     -- Create tab button
     local tabButton = Instance.new("TextButton")
     tabButton.Name = name .. "Tab"
-    tabButton.Size = UDim2.new(1, 0, 0, 40) -- Increased height for better appearance
-    tabButton.BackgroundColor3 = Color3.fromRGB(30, 28, 45) -- Slightly darker for inactive
+    tabButton.Size = UDim2.new(1, -16, 0, 40) -- Increased height for better appearance
+    tabButton.BackgroundTransparency = 0.5 -- Slightly darker for inactive
     tabButton.BorderSizePixel = 0
     tabButton.Text = tab.Icon .. "  " .. name
     tabButton.TextColor3 = Theme.TextSecondary
     tabButton.TextSize = 14 -- Increased font size
     tabButton.Font = Enum.Font.GothamSemibold
-    tabButton.TextXAlignment = Enum.TextXAlignment.Left
+    tabButton.TextXAlignment = Enum.TextXAlignment.Cented
     tabButton.TextScaled = true
     tabButton.TextWrapped = true
     tabButton.LayoutOrder = #self.Tabs + 1
@@ -568,7 +631,7 @@ function Window:CreateTab(name, icon)
     
     tabButton.MouseLeave:Connect(function()
         if not tab.Active then
-            CreateTween(tabButton, {BackgroundColor3 = Color3.fromRGB(30, 28, 45)}):Play()
+            CreateTween(tabButton, {BackgroundTransparency = 0.5}):Play()
         end
     end)
     
@@ -595,9 +658,11 @@ function Window:SelectTab(targetTab)
     targetTab.Active = true
     targetTab.Frame.Visible = true
     CreateTween(targetTab.Button, {
-        BackgroundColor3 = Theme.Accent,
-        TextColor3 = Theme.Text
-    }):Play()
+    BackgroundColor3 = Theme.Accent,
+    BackgroundTransparency = 0.2,
+    TextColor3 = Theme.Text
+}):Play()
+
     
     self.CurrentTab = targetTab
 end
@@ -608,7 +673,7 @@ function Window:GetTabMethods()
             local section = Instance.new("TextLabel")
             section.Name = name .. "Section"
             section.Size = UDim2.new(1, 0, 0, 20) -- Smaller section height
-            section.BackgroundTransparency = 1
+            section.BackgroundTransparency = 0.5
             section.Text = name
             section.TextColor3 = Theme.Text
             section.TextSize = 12 -- Smaller font
@@ -685,7 +750,7 @@ function Window:GetTabMethods()
             toggleLabel.Text = config.Name or "Toggle"
             toggleLabel.TextColor3 = Theme.Text
             toggleLabel.TextSize = 11 -- Smaller font
-            toggleLabel.Font = Enum.Font.GothamSemibold
+            toggleLabel.Font = Enum.Font.GothamBold
             toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
             toggleLabel.TextYAlignment = Enum.TextYAlignment.Center
             toggleLabel.Parent = toggleFrame
@@ -805,7 +870,7 @@ function Window:GetTabMethods()
             sliderLabel.Text = config.Name or "Slider"
             sliderLabel.TextColor3 = Theme.Text
             sliderLabel.TextSize = 11 -- Smaller font
-            sliderLabel.Font = Enum.Font.GothamSemibold
+            sliderLabel.Font = Enum.Font.GothamBold
             sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
             sliderLabel.Parent = sliderFrame
             
@@ -959,7 +1024,7 @@ function Window:GetTabMethods()
             dropdownButton.Text = config.Name or "Dropdown"
             dropdownButton.TextColor3 = Theme.Text
             dropdownButton.TextSize = 11 -- Smaller font
-            dropdownButton.Font = Enum.Font.GothamSemibold
+            dropdownButton.Font = Enum.Font.Gothambold
             dropdownButton.TextXAlignment = Enum.TextXAlignment.Left
             dropdownButton.Parent = dropdownFrame
             
@@ -1039,7 +1104,7 @@ function Window:GetTabMethods()
                 optionButton.Text = optionText
                 optionButton.TextColor3 = Theme.Text
                 optionButton.TextSize = 10 -- Smaller font
-                optionButton.Font = Enum.Font.Gotham
+                optionButton.Font = Enum.Font.GothamBold
                 optionButton.TextXAlignment = Enum.TextXAlignment.Left
                 optionButton.ZIndex = 22 -- Higher than list
                 optionButton.Parent = dropdownList
@@ -1160,7 +1225,7 @@ function Window:GetTabMethods()
             inputBox.TextColor3 = Theme.Text
             inputBox.PlaceholderColor3 = Theme.TextDisabled
             inputBox.TextSize = 11 -- Smaller font
-            inputBox.Font = Enum.Font.Gotham
+            inputBox.Font = Enum.Font.GothamBold
             inputBox.TextXAlignment = Enum.TextXAlignment.Left
             inputBox.ClearTextOnFocus = false
             inputBox.Parent = inputFrame
