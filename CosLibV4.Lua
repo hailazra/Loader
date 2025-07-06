@@ -1155,11 +1155,12 @@ function Window:GetTabMethods()
             local inputFrame = Instance.new("Frame")
             inputFrame.Name = (config.Name or "Input") .. "Frame"
             inputFrame.Size = UDim2.new(1, 0, 0, 30) -- Smaller input height
+            inputFrame.BackgroundColor3 = Theme.Surface
             inputFrame.BackgroundTransparency = 0.5
             inputFrame.BorderSizePixel = 0
             inputFrame.LayoutOrder = #self.Elements + 1
             inputFrame.Parent = self.Frame
-            
+
             CreateCorner(inputFrame, UDim.new(0, 6))
             CreateStroke(inputFrame, Theme.Border, 0.5)
             CreatePadding(inputFrame, UDim.new(0, 8))
