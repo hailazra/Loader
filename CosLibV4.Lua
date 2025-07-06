@@ -513,7 +513,7 @@ function Window:CreateTab(name, icon)
     local tabButton = Instance.new("TextButton")
     tabButton.Name = name .. "Tab"
     tabButton.Size = UDim2.new(1, 0, 0, 40) -- Increased height for better appearance
-    tabButton.BackgroundColor3 = Color3.fromRGB(30, 28, 45) -- Slightly darker for inactive
+    tabButton.BackgroundTransparency = 0.5 -- Slightly darker for inactive
     tabButton.BorderSizePixel = 0
     tabButton.Text = tab.Icon .. "  " .. name
     tabButton.TextColor3 = Theme.TextSecondary
@@ -562,13 +562,13 @@ function Window:CreateTab(name, icon)
     -- Hover effects
     tabButton.MouseEnter:Connect(function()
         if not tab.Active then
-            CreateTween(tabButton, {BackgroundColor3 = Color3.fromRGB(40, 38, 55)}):Play()
+            CreateTween(tabButton, {BackgroundColor3 = Color3.fromRGB(40, 38, 55), BackgroundTransparency = 0.3}):Play()
         end
     end)
     
     tabButton.MouseLeave:Connect(function()
         if not tab.Active then
-            CreateTween(tabButton, {BackgroundColor3 = Color3.fromRGB(30, 28, 45)}):Play()
+            CreateTween(tabButton, {BackgroundColor3 = Color3.fromRGB(30, 28, 45), BackgroundTransparency = 0.5}):Play()
         end
     end)
     
@@ -587,7 +587,7 @@ function Window:SelectTab(targetTab)
         tab.Active = false
         tab.Frame.Visible = false
         CreateTween(tab.Button, {
-            BackgroundColor3 = Color3.fromRGB(40, 38, 55), -- Inactive tab background
+            BackgroundColor3 = Color3.fromRGB(40, 38, 55), BackgroundTransparency = 0.5, -- Inactive tab background
             TextColor3 = Theme.TextSecondary
         }):Play()
     end
@@ -627,7 +627,7 @@ function Window:GetTabMethods()
             local button = Instance.new("TextButton")
             button.Name = (config.Name or "Button") .. "Btn"
             button.Size = UDim2.new(1, 0, 0, 28) -- Smaller button height
-            button.BackgroundColor3 = Theme.Button
+            button.BackgroundTransparency = 0.5
             button.BorderSizePixel = 0
             button.Text = config.Name or "Button"
             button.TextColor3 = Theme.Text
@@ -644,18 +644,18 @@ function Window:GetTabMethods()
                 SafeCall(config.Callback or function() end)
                 
                 -- Visual feedback
-                CreateTween(button, {BackgroundColor3 = Theme.AccentActive}, AnimationSettings.Fast):Play()
+                CreateTween(button, {BackgroundColor3 = Theme.AccentActive, BackgroundTransparency = 0.3}, AnimationSettings.Fast):Play()
                 wait(AnimationSettings.Fast)
                 CreateTween(button, {BackgroundColor3 = Theme.ButtonHover}, AnimationSettings.Fast):Play()
             end)
             
             -- Hover effects
             button.MouseEnter:Connect(function()
-                CreateTween(button, {BackgroundColor3 = Theme.ButtonHover}):Play()
+                CreateTween(button, {BackgroundColor3 = Theme.ButtonHover, BackgroundTransparency = 0.3}):Play()
             end)
             
             button.MouseLeave:Connect(function()
-                CreateTween(button, {BackgroundColor3 = Theme.Button}):Play()
+                CreateTween(button, {BackgroundColor3 = Theme.Button, BackgroundTransparency = 0.5}):Play()
             end)
             
             table.insert(self.Elements, button)
@@ -668,7 +668,7 @@ function Window:GetTabMethods()
             local toggleFrame = Instance.new("Frame")
             toggleFrame.Name = (config.Name or "Toggle") .. "Frame"
             toggleFrame.Size = UDim2.new(1, 0, 0, 30) -- Smaller toggle height
-            toggleFrame.BackgroundColor3 = Theme.Surface
+            toggleFrame.BackgroundTransparency = 0.5
             toggleFrame.BorderSizePixel = 0
             toggleFrame.LayoutOrder = #self.Elements + 1
             toggleFrame.Parent = self.Frame
@@ -694,7 +694,7 @@ function Window:GetTabMethods()
             toggleSwitch.Name = "ToggleSwitch"
             toggleSwitch.Size = UDim2.new(0, 34, 0, 16) -- Smaller switch
             toggleSwitch.Position = UDim2.new(1, -34, 0.5, -8)
-            toggleSwitch.BackgroundColor3 = Theme.Toggle
+            toggleSwitch.BackgroundTransparency = 0.5
             toggleSwitch.BorderSizePixel = 0
             toggleSwitch.Parent = toggleFrame
             
@@ -729,7 +729,7 @@ function Window:GetTabMethods()
                         CreateTween(toggleSwitch, {BackgroundColor3 = Theme.Toggle}):Play()
                         CreateTween(toggleIndicator, {
                             Position = UDim2.new(0, 2, 0, 2),
-                            BackgroundColor3 = Theme.TextSecondary
+                            BackgroundColor3 = Theme.TextSecondary, BackgroundTransparency = 0.5
                         }):Play()
                     end
                 else
@@ -788,7 +788,7 @@ function Window:GetTabMethods()
             local sliderFrame = Instance.new("Frame")
             sliderFrame.Name = (config.Name or "Slider") .. "Frame"
             sliderFrame.Size = UDim2.new(1, 0, 0, 45) -- Smaller slider height
-            sliderFrame.BackgroundColor3 = Theme.Surface
+            sliderFrame.BackgroundTransparency = 0.5
             sliderFrame.BorderSizePixel = 0
             sliderFrame.LayoutOrder = #self.Elements + 1
             sliderFrame.Parent = self.Frame
@@ -825,7 +825,7 @@ function Window:GetTabMethods()
             sliderTrack.Name = "Track"
             sliderTrack.Size = UDim2.new(1, 0, 0, 4) -- Thinner track
             sliderTrack.Position = UDim2.new(0, 0, 1, -12)
-            sliderTrack.BackgroundColor3 = Theme.Toggle
+            sliderTrack.BackgroundTransparency = 0.5
             sliderTrack.BorderSizePixel = 0
             sliderTrack.Parent = sliderFrame
             
@@ -835,7 +835,7 @@ function Window:GetTabMethods()
             sliderFill.Name = "Fill"
             sliderFill.Size = UDim2.new(0.5, 0, 1, 0)
             sliderFill.Position = UDim2.new(0, 0, 0, 0)
-            sliderFill.BackgroundColor3 = Theme.AccentActive
+            sliderFill.BackgroundTransparency = 0.5
             sliderFill.BorderSizePixel = 0
             sliderFill.Parent = sliderTrack
             
@@ -845,7 +845,7 @@ function Window:GetTabMethods()
             sliderHandle.Name = "Handle"
             sliderHandle.Size = UDim2.new(0, 12, 0, 12) -- Smaller handle
             sliderHandle.Position = UDim2.new(0.5, -6, 0, -4)
-            sliderHandle.BackgroundColor3 = Theme.Text
+            sliderHandle.BackgroundTransparency = 0.5
             sliderHandle.BorderSizePixel = 0
             sliderHandle.Parent = sliderTrack
             
@@ -940,7 +940,7 @@ function Window:GetTabMethods()
             local dropdownFrame = Instance.new("Frame")
             dropdownFrame.Name = (config.Name or "Dropdown") .. "Frame"
             dropdownFrame.Size = UDim2.new(1, 0, 0, 30) -- Smaller dropdown height
-            dropdownFrame.BackgroundColor3 = Theme.Surface
+            dropdownFrame.BackgroundTransparency = 0.5
             dropdownFrame.BorderSizePixel = 0
             dropdownFrame.LayoutOrder = #self.Elements + 1
             dropdownFrame.ClipsDescendants = false -- Allow dropdown to expand outside
@@ -1000,7 +1000,7 @@ function Window:GetTabMethods()
             dropdownList.Name = "List"
             dropdownList.Size = UDim2.new(1, 0, 0, 0)
             dropdownList.Position = UDim2.new(0, 0, 0, 0)
-            dropdownList.BackgroundColor3 = Theme.Surface
+            dropdownList.BackgroundTransparency = 0.5
             dropdownList.BorderSizePixel = 0
             dropdownList.Visible = false
             dropdownList.ZIndex = 101 -- Higher than container
@@ -1034,7 +1034,7 @@ function Window:GetTabMethods()
                 local optionButton = Instance.new("TextButton")
                 optionButton.Name = optionText
                 optionButton.Size = UDim2.new(1, 0, 0, 22) -- Smaller option height
-                optionButton.BackgroundColor3 = Theme.Button
+                optionButton.BackgroundTransparency = 0.5
                 optionButton.BorderSizePixel = 0
                 optionButton.Text = optionText
                 optionButton.TextColor3 = Theme.Text
@@ -1067,11 +1067,11 @@ function Window:GetTabMethods()
                 end)
                 
                 optionButton.MouseEnter:Connect(function()
-                    CreateTween(optionButton, {BackgroundColor3 = Theme.ButtonHover}):Play()
+                    CreateTween(optionButton, {BackgroundColor3 = Theme.ButtonHover, BackgroundTransparency = 0.3}):Play()
                 end)
                 
                 optionButton.MouseLeave:Connect(function()
-                    CreateTween(optionButton, {BackgroundColor3 = Theme.Button}):Play()
+                    CreateTween(optionButton, {BackgroundColor3 = Theme.Button, BackgroundTransparency = 0.5}):Play()
                 end)
             end
             
@@ -1108,11 +1108,11 @@ function Window:GetTabMethods()
             
             -- Hover effects
             dropdownButton.MouseEnter:Connect(function()
-                CreateTween(dropdownButton, {BackgroundColor3 = Theme.ButtonHover}):Play()
+                CreateTween(dropdownButton, {BackgroundColor3 = Theme.ButtonHover, BackgroundTransparency = 0.3}):Play()
             end)
             
             dropdownButton.MouseLeave:Connect(function()
-                CreateTween(dropdownButton, {BackgroundColor3 = Theme.Button}):Play()
+                CreateTween(dropdownButton, {BackgroundColor3 = Theme.Button, BackgroundTransparency = 0.5}):Play()
             end)
             
             -- Store reference
@@ -1141,7 +1141,7 @@ function Window:GetTabMethods()
             local inputFrame = Instance.new("Frame")
             inputFrame.Name = (config.Name or "Input") .. "Frame"
             inputFrame.Size = UDim2.new(1, 0, 0, 30) -- Smaller input height
-            inputFrame.BackgroundColor3 = Theme.Surface
+            inputFrame.BackgroundTransparency = 0.5
             inputFrame.BorderSizePixel = 0
             inputFrame.LayoutOrder = #self.Elements + 1
             inputFrame.Parent = self.Frame
