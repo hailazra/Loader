@@ -34,7 +34,7 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 
 -- Constants
 local WINDOW_SIZE = UDim2.new(0, 500, 0, 250) -- Mobile friendly size
-local SIDEBAR_WIDTH = 120 -- Smaller sidebar
+local SIDEBAR_WIDTH = 100 -- Smaller sidebar
 local MINIMIZE_ICON_SIZE = UDim2.new(0, 40, 0, 40)
 
 -- Theme Configuration (Purple Space Theme)
@@ -293,6 +293,7 @@ function CosmicUI:CreateWindow(config)
     window.TitleBar.Size = UDim2.new(1, 0, 0, 35) -- Smaller title bar
     window.TitleBar.Position = UDim2.new(0, 0, 0, 0)
     window.TitleBar.BackgroundColor3 = Theme.Secondary
+    window.TitleBar.BackgroundTransparency = 0.1
     window.TitleBar.BorderSizePixel = 0
     window.TitleBar.Parent = window.MainFrame
     
@@ -512,12 +513,12 @@ function Window:CreateTab(name, icon)
     -- Create tab button
     local tabButton = Instance.new("TextButton")
     tabButton.Name = name .. "Tab"
-    tabButton.Size = UDim2.new(1, 0, 0, 40) -- Increased height for better appearance
+    tabButton.Size = UDim2.new(1, 0, 0, 35) -- Increased height for better appearance
     tabButton.BackgroundTransparency = 0.5 -- Slightly darker for inactive
     tabButton.BorderSizePixel = 0
     tabButton.Text = tab.Icon .. "  " .. name
     tabButton.TextColor3 = Theme.TextSecondary
-    tabButton.TextSize = 14 -- Increased font size
+    tabButton.TextSize = 12 -- Increased font size
     tabButton.Font = Enum.Font.GothamSemibold
     tabButton.TextXAlignment = Enum.TextXAlignment.Left
     tabButton.TextScaled = true
@@ -526,7 +527,7 @@ function Window:CreateTab(name, icon)
     tabButton.Parent = self.Sidebar
 
     CreateCorner(tabButton, UDim.new(0, 8)) -- More rounded corners
-    CreatePadding(tabButton, UDim.new(0, 10)) -- Increased padding
+    CreatePadding(tabButton, UDim.new(0, 8)) -- Increased padding
     
     -- Create tab content frame
     local tabFrame = Instance.new("ScrollingFrame")
@@ -562,13 +563,13 @@ function Window:CreateTab(name, icon)
     -- Hover effects
     tabButton.MouseEnter:Connect(function()
         if not tab.Active then
-            CreateTween(tabButton, {BackgroundColor3 = Color3.fromRGB(40, 38, 55), BackgroundTransparency = 0.3}):Play()
+            CreateTween(tabButton, {BackgroundColor3 = Theme.AccentHover, BackgroundTransparency = 0.3}):Play()
         end
     end)
     
     tabButton.MouseLeave:Connect(function()
         if not tab.Active then
-            CreateTween(tabButton, {BackgroundColor3 = Color3.fromRGB(30, 28, 45), BackgroundTransparency = 0.5}):Play()
+            CreateTween(tabButton, {BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.5}):Play()
         end
     end)
     
@@ -587,7 +588,7 @@ function Window:SelectTab(targetTab)
         tab.Active = false
         tab.Frame.Visible = false
         CreateTween(tab.Button, {
-            BackgroundColor3 = Color3.fromRGB(40, 38, 55), BackgroundTransparency = 0.5, -- Inactive tab background
+            BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.5, -- Inactive tab background
             TextColor3 = Theme.TextSecondary
         }):Play()
     end
@@ -627,6 +628,7 @@ function Window:GetTabMethods()
             local button = Instance.new("TextButton")
             button.Name = (config.Name or "Button") .. "Btn"
             button.Size = UDim2.new(1, 0, 0, 28) -- Smaller button height
+            button.BackgroundColor3 = Theme.Button
             button.BackgroundTransparency = 0.5
             button.BorderSizePixel = 0
             button.Text = config.Name or "Button"
@@ -668,6 +670,7 @@ function Window:GetTabMethods()
             local toggleFrame = Instance.new("Frame")
             toggleFrame.Name = (config.Name or "Toggle") .. "Frame"
             toggleFrame.Size = UDim2.new(1, 0, 0, 30) -- Smaller toggle height
+            toggleFrame.BackgroundColor3 = Theme.Surface
             toggleFrame.BackgroundTransparency = 0.5
             toggleFrame.BorderSizePixel = 0
             toggleFrame.LayoutOrder = #self.Elements + 1
@@ -694,6 +697,7 @@ function Window:GetTabMethods()
             toggleSwitch.Name = "ToggleSwitch"
             toggleSwitch.Size = UDim2.new(0, 34, 0, 16) -- Smaller switch
             toggleSwitch.Position = UDim2.new(1, -34, 0.5, -8)
+            toggleSwitch.BackgroundColor3 = Theme.Toggle
             toggleSwitch.BackgroundTransparency = 0.5
             toggleSwitch.BorderSizePixel = 0
             toggleSwitch.Parent = toggleFrame
@@ -788,6 +792,7 @@ function Window:GetTabMethods()
             local sliderFrame = Instance.new("Frame")
             sliderFrame.Name = (config.Name or "Slider") .. "Frame"
             sliderFrame.Size = UDim2.new(1, 0, 0, 45) -- Smaller slider height
+            sliderFrame.BackgroundColor3 = Theme.Surface
             sliderFrame.BackgroundTransparency = 0.5
             sliderFrame.BorderSizePixel = 0
             sliderFrame.LayoutOrder = #self.Elements + 1
@@ -825,6 +830,7 @@ function Window:GetTabMethods()
             sliderTrack.Name = "Track"
             sliderTrack.Size = UDim2.new(1, 0, 0, 4) -- Thinner track
             sliderTrack.Position = UDim2.new(0, 0, 1, -12)
+            sliderTrack.BackgroundColor3 = Theme.Toggle
             sliderTrack.BackgroundTransparency = 0.5
             sliderTrack.BorderSizePixel = 0
             sliderTrack.Parent = sliderFrame
@@ -835,6 +841,7 @@ function Window:GetTabMethods()
             sliderFill.Name = "Fill"
             sliderFill.Size = UDim2.new(0.5, 0, 1, 0)
             sliderFill.Position = UDim2.new(0, 0, 0, 0)
+            sliderFill.BackgroundColor3 = Theme.AccentActive
             sliderFill.BackgroundTransparency = 0.5
             sliderFill.BorderSizePixel = 0
             sliderFill.Parent = sliderTrack
@@ -845,6 +852,7 @@ function Window:GetTabMethods()
             sliderHandle.Name = "Handle"
             sliderHandle.Size = UDim2.new(0, 12, 0, 12) -- Smaller handle
             sliderHandle.Position = UDim2.new(0.5, -6, 0, -4)
+            sliderHandle.BackgroundColor3 = Theme.Text
             sliderHandle.BackgroundTransparency = 0.5
             sliderHandle.BorderSizePixel = 0
             sliderHandle.Parent = sliderTrack
@@ -940,6 +948,7 @@ function Window:GetTabMethods()
             local dropdownFrame = Instance.new("Frame")
             dropdownFrame.Name = (config.Name or "Dropdown") .. "Frame"
             dropdownFrame.Size = UDim2.new(1, 0, 0, 30) -- Smaller dropdown height
+            dropdownFrame.BackgroundColor3 = Theme.Surface
             dropdownFrame.BackgroundTransparency = 0.5
             dropdownFrame.BorderSizePixel = 0
             dropdownFrame.LayoutOrder = #self.Elements + 1
@@ -1000,6 +1009,7 @@ function Window:GetTabMethods()
             dropdownList.Name = "List"
             dropdownList.Size = UDim2.new(1, 0, 0, 0)
             dropdownList.Position = UDim2.new(0, 0, 0, 0)
+            dropdownList.BackgroundColor3 = Theme.Surface
             dropdownList.BackgroundTransparency = 0.5
             dropdownList.BorderSizePixel = 0
             dropdownList.Visible = false
@@ -1034,6 +1044,7 @@ function Window:GetTabMethods()
                 local optionButton = Instance.new("TextButton")
                 optionButton.Name = optionText
                 optionButton.Size = UDim2.new(1, 0, 0, 22) -- Smaller option height
+                optionButton.BackgroundColor3 = Theme.Button
                 optionButton.BackgroundTransparency = 0.5
                 optionButton.BorderSizePixel = 0
                 optionButton.Text = optionText
