@@ -1168,6 +1168,7 @@ function Window:GetTabMethods()
             inputBox.Name = "InputBox"
             inputBox.Size = UDim2.new(1, 0, 1, 0) -- Full height
             inputBox.Position = UDim2.new(0, 0, 0, 0)
+            inputBox.BackgroundColor3 = Theme.Background -- Atau warna tema yang sesuai
             inputBox.BackgroundTransparency = 1
             inputBox.Text = config.CurrentValue or ""
             inputBox.PlaceholderText = config.PlaceholderText or (config.Name or "Enter text...")
