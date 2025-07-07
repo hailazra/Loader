@@ -515,22 +515,65 @@ function Window:CreateTab(name, icon)
     -- Create tab button
     local tabButton = Instance.new("TextButton")
     tabButton.Name = name .. "Tab"
-    tabButton.Size = UDim2.new(1, 0, 0, 35) -- Increased height for better appearance
-    tabButton.BackgroundColor3 = Color3.new(0, 0, 0) -- Transparan/mengikuti parent
-    tabButton.BackgroundTransparency = 0.5 -- Slightly darker for inactive
+    tabButton.Size = UDim2.new(1, 0, 0, 35)
+    tabButton.BackgroundColor3 = Color3.new(0, 0, 0)
+    tabButton.BackgroundTransparency = 0.5
     tabButton.BorderSizePixel = 0
-    tabButton.Text = tab.Icon .. "  " .. name
+    tabButton.Text = ""
     tabButton.TextColor3 = Theme.TextSecondary
-    tabButton.TextSize = 12 -- Increased font size
+    tabButton.TextSize = 12
     tabButton.Font = Enum.Font.GothamBold
     tabButton.TextXAlignment = Enum.TextXAlignment.Left
-    tabButton.TextScaled = true
-    tabButton.TextWrapped = true
     tabButton.LayoutOrder = #self.Tabs + 1
     tabButton.Parent = self.Sidebar
 
-    CreateCorner(tabButton, UDim.new(0, 8)) -- More rounded corners
-    CreatePadding(tabButton, UDim.new(0, 8)) -- Increased padding
+    CreateCorner(tabButton, UDim.new(0, 8))
+    CreatePadding(tabButton, UDim.new(0, 8))
+    
+    -- Create icon (image atau emoji)
+    local iconElement
+    if icon and (string.find(icon, "rbxassetid://") or tonumber(icon)) then
+        -- Pake ImageLabel untuk rbxassetid
+        iconElement = Instance.new("ImageLabel")
+        if tonumber(icon) then
+            iconElement.Image = "rbxassetid://" .. icon
+        else
+            iconElement.Image = icon
+        end
+        iconElement.Size = UDim2.new(0, 16, 0, 16)
+        iconElement.Position = UDim2.new(0, 0, 0.5, -8)
+        iconElement.BackgroundTransparency = 1
+        iconElement.ImageColor3 = Theme.TextSecondary
+        iconElement.Parent = tabButton
+    else
+        -- Pake TextLabel untuk emoji
+        iconElement = Instance.new("TextLabel")
+        iconElement.Text = icon or "📋"
+        iconElement.Size = UDim2.new(0, 16, 0, 16)
+        iconElement.Position = UDim2.new(0, 0, 0.5, -8)
+        iconElement.BackgroundTransparency = 1
+        iconElement.TextColor3 = Theme.TextSecondary
+        iconElement.TextSize = 12
+        iconElement.Font = Enum.Font.GothamBold
+        iconElement.TextXAlignment = Enum.TextXAlignment.Center
+        iconElement.Parent = tabButton
+    end
+    
+    -- Create text label
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Text = name
+    textLabel.Size = UDim2.new(1, -24, 1, 0)
+    textLabel.Position = UDim2.new(0, 24, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextColor3 = Theme.TextSecondary
+    textLabel.TextSize = 12
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.Parent = tabButton
+    
+    -- Store references
+    tab.IconElement = iconElement
+    tab.TextElement = textLabel
     
     -- Create tab content frame
     local tabFrame = Instance.new("ScrollingFrame")
@@ -545,8 +588,8 @@ function Window:CreateTab(name, icon)
     tabFrame.Visible = false
     tabFrame.Parent = self.Content
     
-    CreatePadding(tabFrame, UDim.new(0, 8)) -- Reduced padding
-    local layout = CreateListLayout(tabFrame, Enum.FillDirection.Vertical, UDim.new(0, 6)) -- Reduced spacing
+    CreatePadding(tabFrame, UDim.new(0, 8))
+    local layout = CreateListLayout(tabFrame, Enum.FillDirection.Vertical, UDim.new(0, 6))
     
     -- Auto-resize canvas
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -590,18 +633,28 @@ function Window:SelectTab(targetTab)
     for _, tab in pairs(self.Tabs) do
         tab.Active = false
         tab.Frame.Visible = false
-        CreateTween(tab.Button, {
-            BackgroundTransparency = 1, -- Transparan
-            TextColor3 = Theme.TextSecondary
-        }):Play()
+        CreateTween(tab.Button, {BackgroundTransparency = 1}):Play()
+        
+        -- Update icon dan text color
+        if tab.IconElement:IsA("ImageLabel") then
+            tab.IconElement.ImageColor3 = Theme.TextSecondary
+        else
+            tab.IconElement.TextColor3 = Theme.TextSecondary
+        end
+        tab.TextElement.TextColor3 = Theme.TextSecondary
     end
     
     targetTab.Active = true
     targetTab.Frame.Visible = true
-    CreateTween(targetTab.Button, {
-        BackgroundTransparency = 1, -- Tetap transparan
-        TextColor3 = Theme.Text
-    }):Play()
+    CreateTween(targetTab.Button, {BackgroundTransparency = 1}):Play()
+    
+    -- Update active icon dan text color
+    if targetTab.IconElement:IsA("ImageLabel") then
+        targetTab.IconElement.ImageColor3 = Theme.Text
+    else
+        targetTab.IconElement.TextColor3 = Theme.Text
+    end
+    targetTab.TextElement.TextColor3 = Theme.Text
     
     self.CurrentTab = targetTab
 end
