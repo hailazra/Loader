@@ -1162,45 +1162,201 @@ function Window:GetTabMethods()
                     dropdownList.Visible = true
                     local targetSize = math.min(listLayout.AbsoluteContentSize.Y + 8, 100) -- Max 100px height
                     CreateTween(dropdownArrow, {Rotation = 180}):Play()
-                    CreateTween(dropdownListContainer, {Size = UDim2.new(1, 0, 0, targetSize)}):Play()
-                    CreateTween(dropdownList, {Size = UDim2.new(1, 0, 0, targetSize)}):Play()
-                else
-                    CreateTween(dropdownArrow, {Rotation = 0}):Play()
-                    CreateTween(dropdownListContainer, {Size = UDim2.new(1, 0, 0, 0)}, AnimationSettings.Fast):Play()
-                    CreateTween(dropdownList, {Size = UDim2.new(1, 0, 0, 0)}, AnimationSettings.Fast):Play()
-                    wait(AnimationSettings.Fast)
-                    dropdownList.Visible = false
-                end
-            end)
+CreateDropdown = function(self, config)
+    config = config or {}
+    
+    local dropdownFrame = Instance.new("Frame")
+    dropdownFrame.Name = (config.Name or "Dropdown") .. "Frame"
+    dropdownFrame.Size = UDim2.new(1, 0, 0, 30) -- Smaller dropdown height
+    dropdownFrame.BackgroundColor3 = Theme.Surface
+    dropdownFrame.BackgroundTransparency = 0.5
+    dropdownFrame.BorderSizePixel = 0
+    dropdownFrame.LayoutOrder = #self.Elements + 1
+    dropdownFrame.ClipsDescendants = false -- Allow dropdown to expand outside
+    dropdownFrame.Parent = self.Frame
+    
+    CreateCorner(dropdownFrame, UDim.new(0, 6))
+    CreateStroke(dropdownFrame, Theme.Border, 0.5)
+    CreatePadding(dropdownFrame, UDim.new(0, 8)) -- Reduced padding
+    
+    local dropdownButton = Instance.new("TextButton")
+    dropdownButton.Name = "Button"
+    dropdownButton.Size = UDim2.new(1, 0, 1, 0) -- Full height of frame
+    dropdownButton.Position = UDim2.new(0, 0, 0, 0)
+    dropdownButton.BackgroundTransparency = 1
+    dropdownButton.BorderSizePixel = 0
+    dropdownButton.Text = config.Name or "Dropdown"
+    dropdownButton.TextColor3 = Theme.Text
+    dropdownButton.TextSize = 11 -- Smaller font
+    dropdownButton.Font = Enum.Font.GothamBold
+    dropdownButton.TextXAlignment = Enum.TextXAlignment.Left
+    dropdownButton.Parent = dropdownFrame
+    
+    local selectedLabel = Instance.new("TextLabel")
+    selectedLabel.Name = "SelectedLabel"
+    selectedLabel.Size = UDim2.new(1, -20, 1, 0)
+    selectedLabel.Position = UDim2.new(0, 0, 0, 0)
+    selectedLabel.BackgroundTransparency = 1
+    selectedLabel.Text = config.CurrentOption or "Select Option"
+    selectedLabel.TextColor3 = Theme.TextSecondary
+    selectedLabel.TextSize = 10 -- Smaller font
+    selectedLabel.Font = Enum.Font.GothamBold
+    selectedLabel.TextXAlignment = Enum.TextXAlignment.Right
+    selectedLabel.Parent = dropdownFrame
+    
+    local dropdownArrow = Instance.new("TextLabel")
+    dropdownArrow.Name = "Arrow"
+    dropdownArrow.Size = UDim2.new(0, 15, 1, 0)
+    dropdownArrow.Position = UDim2.new(1, -15, 0, 0)
+    dropdownArrow.BackgroundTransparency = 1
+    dropdownArrow.Text = "▼"
+    dropdownArrow.TextColor3 = Theme.TextSecondary
+    dropdownArrow.TextSize = 8 -- Smaller arrow
+    dropdownArrow.Font = Enum.Font.Gotham
+    dropdownArrow.Parent = dropdownFrame
+    
+    -- Create invisible spacer frame that will expand/contract to push elements down
+    local spacerFrame = Instance.new("Frame")
+    spacerFrame.Name = "DropdownSpacer"
+    spacerFrame.Size = UDim2.new(1, 0, 0, 0) -- Start with 0 height
+    spacerFrame.BackgroundTransparency = 1
+    spacerFrame.BorderSizePixel = 0
+    spacerFrame.LayoutOrder = #self.Elements + 2 -- Place right after dropdown
+    spacerFrame.Parent = self.Frame
+    
+    -- Create dropdown list frame (positioned relatively to spacer, offset to right)
+    local dropdownList = Instance.new("ScrollingFrame")
+    dropdownList.Name = "List"
+    dropdownList.Size = UDim2.new(1, -20, 0, 0) -- Slightly narrower and offset right
+    dropdownList.Position = UDim2.new(0, 20, 0, 0) -- 20px offset to right
+    dropdownList.BackgroundColor3 = Theme.Surface
+    dropdownList.BackgroundTransparency = 0.5
+    dropdownList.BorderSizePixel = 0
+    dropdownList.Visible = false
+    dropdownList.ZIndex = 101
+    dropdownList.ScrollBarThickness = 3
+    dropdownList.ScrollBarImageColor3 = Theme.Accent
+    dropdownList.CanvasSize = UDim2.new(0, 0, 0, 0)
+    dropdownList.Parent = spacerFrame
+    
+    CreateCorner(dropdownList, UDim.new(0, 6))
+    CreateStroke(dropdownList, Theme.BorderAccent, 0.5)
+    CreateDropShadow(dropdownList, Vector2.new(0, 2), 8, 0.3)
+    
+    local listLayout = CreateListLayout(dropdownList, Enum.FillDirection.Vertical, UDim.new(0, 2))
+    CreatePadding(dropdownList, UDim.new(0, 4))
+    
+    local currentOption = config.CurrentOption or ""
+    local flag = config.Flag
+    local isOpen = false
+    
+    local function CreateOption(optionText)
+        local optionButton = Instance.new("TextButton")
+        optionButton.Name = optionText
+        optionButton.Size = UDim2.new(1, 0, 0, 22) -- Smaller option height
+        optionButton.BackgroundColor3 = Theme.Button
+        optionButton.BackgroundTransparency = 0.5
+        optionButton.BorderSizePixel = 0
+        optionButton.Text = optionText
+        optionButton.TextColor3 = Theme.Text
+        optionButton.TextSize = 10 -- Smaller font
+        optionButton.Font = Enum.Font.GothamBold
+        optionButton.TextXAlignment = Enum.TextXAlignment.Left
+        optionButton.ZIndex = 22 -- Higher than list
+        optionButton.Parent = dropdownList
+        
+        CreateCorner(optionButton, UDim.new(0, 4))
+        CreatePadding(optionButton, UDim.new(0, 6))
+        
+        optionButton.MouseButton1Click:Connect(function()
+            currentOption = optionText
+            selectedLabel.Text = optionText
             
-            -- Hover effects
-            dropdownButton.MouseEnter:Connect(function()
-                CreateTween(dropdownButton, {BackgroundColor3 = Theme.ButtonHover, BackgroundTransparency = 0.3}):Play()
-            end)
-            
-            dropdownButton.MouseLeave:Connect(function()
-                CreateTween(dropdownButton, {BackgroundColor3 = Theme.Button, BackgroundTransparency = 0.5}):Play()
-            end)
-            
-            -- Store reference
-            local dropdownObj = {
-                CurrentOption = currentOption,
-                Set = function(option) 
-                    currentOption = option
-                    dropdownButton.Text = option
-                end,
-                AddOption = function(option)
-                    CreateOption(option)
-                end
-            }
+            SafeCall(config.Callback or function() end, optionText)
             
             if flag and self.Window.Flags then
-                self.Window.Flags[flag] = dropdownObj
+                self.Window.Flags[flag] = {CurrentOption = optionText}
             end
             
-            table.insert(self.Elements, dropdownFrame)
-            return dropdownObj
+            -- Close dropdown with push-up animation
+            isOpen = false
+            CreateTween(dropdownArrow, {Rotation = 0}):Play()
+            CreateTween(spacerFrame, {Size = UDim2.new(1, 0, 0, 0)}, AnimationSettings.Fast):Play()
+            CreateTween(dropdownList, {Size = UDim2.new(1, -20, 0, 0)}, AnimationSettings.Fast):Play()
+            wait(AnimationSettings.Fast)
+            dropdownList.Visible = false
+        end)
+        
+        optionButton.MouseEnter:Connect(function()
+            CreateTween(optionButton, {BackgroundColor3 = Theme.ButtonHover, BackgroundTransparency = 0.3}):Play()
+        end)
+        
+        optionButton.MouseLeave:Connect(function()
+            CreateTween(optionButton, {BackgroundColor3 = Theme.Button, BackgroundTransparency = 0.5}):Play()
+        end)
+    end
+    
+    -- Create options
+    if config.Options then
+        for _, option in pairs(config.Options) do
+            CreateOption(option)
+        end
+        
+        -- Update canvas size for scrolling
+        listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            dropdownList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 8)
+        end)
+    end
+    
+    -- Toggle dropdown with push/pull animation
+    dropdownButton.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        if isOpen then 
+            -- Open dropdown with push-down animation
+            dropdownList.Visible = true
+            local targetSize = math.min(listLayout.AbsoluteContentSize.Y + 8, 100) -- Max 100px height
+            CreateTween(dropdownArrow, {Rotation = 180}):Play()
+            -- Expand spacer to push elements down
+            CreateTween(spacerFrame, {Size = UDim2.new(1, 0, 0, targetSize + 5)}):Play() -- +5 for spacing
+            CreateTween(dropdownList, {Size = UDim2.new(1, -20, 0, targetSize)}):Play()
+        else
+            -- Close dropdown with push-up animation
+            CreateTween(dropdownArrow, {Rotation = 0}):Play()
+            CreateTween(spacerFrame, {Size = UDim2.new(1, 0, 0, 0)}, AnimationSettings.Fast):Play()
+            CreateTween(dropdownList, {Size = UDim2.new(1, -20, 0, 0)}, AnimationSettings.Fast):Play()
+            wait(AnimationSettings.Fast)
+            dropdownList.Visible = false
+        end
+    end)
+    
+    -- Hover effects
+    dropdownButton.MouseEnter:Connect(function()
+        CreateTween(dropdownButton, {BackgroundColor3 = Theme.ButtonHover, BackgroundTransparency = 0.3}):Play()
+    end)
+    
+    dropdownButton.MouseLeave:Connect(function()
+        CreateTween(dropdownButton, {BackgroundColor3 = Theme.Button, BackgroundTransparency = 0.5}):Play()
+    end)
+    
+    -- Store reference
+    local dropdownObj = {
+        CurrentOption = currentOption,
+        Set = function(option) 
+            currentOption = option
+            selectedLabel.Text = option
         end,
+        AddOption = function(option)
+            CreateOption(option)
+        end
+    }
+    
+    if flag and self.Window.Flags then
+        self.Window.Flags[flag] = dropdownObj
+    end
+    
+    table.insert(self.Elements, dropdownFrame)
+    return dropdownObj
+end,
         
         CreateInput = function(self, config)
             config = config or {}
