@@ -1374,7 +1374,6 @@ content.BackgroundTransparency = 0.5
 content.BorderSizePixel = 0
 content.Visible = false
 content.ClipsDescendants = false
-content.Position = UDim2.new(0, 0, 1, 2)
 content.Parent = dropdownFrame
 
 CreateCorner(content, UDim.new(0, 6))
@@ -1394,7 +1393,6 @@ local btn = DropdownComponents.CreateButton("> " .. (config.Name or "Dropdown"),
     else
         content.Visible = true
         content.Size = UDim2.new(1, 0, 0, 0)
-        content.Position = UDim2.new(0, 0, 1, 2)
         task.wait()
         local height = content.AbsoluteSize.Y
         content.Size = UDim2.new(1, 0, 0, 0)
