@@ -532,7 +532,7 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
     local dropdown = Instance.new("Frame")
     dropdown.Size = UDim2.new(0, 160, 0, 0)
     dropdown.AutomaticSize = Enum.AutomaticSize.Y
-    dropdown.Position = UDim2.new(0, parentBtn.AbsoluteSize.X + 4, 0, 0)
+    dropdown.Position = UDim2.new(0, parentBtn.AbsoluteSize.X - 10, 0, 0)
     dropdown.BackgroundColor3 = Theme.Surface
     dropdown.BackgroundTransparency = 0.3
     dropdown.BorderSizePixel = 0
