@@ -1364,43 +1364,45 @@ function Window:GetTabMethods()
             CreatePadding(dropdownFrame, UDim.new(0, 4))
             
             -- Create main dropdown button
-            local content = Instance.new("Frame")
-            content.Name = (config.Name or "Dropdown") .. "Content"
-            content.Size = UDim2.new(1, 0, 0, 0)
-            content.AutomaticSize = Enum.AutomaticSize.Y
-            content.BackgroundColor3 = Theme.Secondary
-            content.BackgroundTransparency = 0.5
-            content.BorderSizePixel = 0
-            content.Visible = false
-            content.ClipsDescendants = false
-            content.Parent = dropdownFrame
-            
-            CreateCorner(content, UDim.new(0, 6))
-            CreateStroke(content, Theme.BorderLight, 0.5)
-            
-            local contentLayout = CreateListLayout(content, Enum.FillDirection.Vertical, UDim.new(0, 2))
-            CreatePadding(content, UDim.new(0, 4))
+local btn = DropdownComponents.CreateButton("> " .. (config.Name or "Dropdown"), function()
+    local isOpen = content.Visible
+    if isOpen then
+        local tween = CreateTween(content, {Size = UDim2.new(1, 0, 0, 0)})
+        tween:Play()
+        tween.Completed:Wait()
+        content.Visible = false
+        btn.Text = "> " .. (config.Name or "Dropdown")
+    else
+        content.Visible = true
+        content.Size = UDim2.new(1, 0, 0, 0)
+        task.wait()
+        local height = content.AbsoluteSize.Y
+        content.Size = UDim2.new(1, 0, 0, 0)
+        local tween = CreateTween(content, {Size = UDim2.new(1, 0, 0, height)})
+        tween:Play()
+        btn.Text = "⌄ " .. (config.Name or "Dropdown")
+    end
+end)
 
-            local btn = DropdownComponents.CreateButton("> " .. (config.Name or "Dropdown"), function()
-                local isOpen = content.Visible
-                if isOpen then
-                    local tween = CreateTween(content, {Size = UDim2.new(1, 0, 0, 0)})
-                    tween:Play()
-                    tween.Completed:Wait()
-                    content.Visible = false
-                    btn.Text = "> " .. (config.Name or "Dropdown")
-                else
-                    content.Visible = true
-                    content.Size = UDim2.new(1, 0, 0, 0)
-                    task.wait()
-                    local height = content.AbsoluteSize.Y
-                    content.Size = UDim2.new(1, 0, 0, 0)
-                    local tween = CreateTween(content, {Size = UDim2.new(1, 0, 0, height)})
-                    tween:Play()
-                    btn.Text = "⌄ " .. (config.Name or "Dropdown")
-                end
-            end)
-            btn.Parent = dropdownFrame
+-- Buat konten dropdown
+local content = Instance.new("Frame")
+content.Name = (config.Name or "Dropdown") .. "Content"
+content.Size = UDim2.new(1, 0, 0, 0)
+content.AutomaticSize = Enum.AutomaticSize.Y
+content.BackgroundColor3 = Theme.Secondary
+content.BackgroundTransparency = 0.5
+content.BorderSizePixel = 0
+content.Visible = false
+content.ClipsDescendants = false
+
+CreateCorner(content, UDim.new(0, 6))
+CreateStroke(content, Theme.BorderLight, 0.5)
+local contentLayout = CreateListLayout(content, Enum.FillDirection.Vertical, UDim.new(0, 2))
+CreatePadding(content, UDim.new(0, 4))
+
+-- Susun ke parent sesuai urutan
+btn.Parent = dropdownFrame
+content.Parent = dropdownFrame
             
             -- Content builder function
             if config.ContentBuilder then
