@@ -1364,6 +1364,22 @@ function Window:GetTabMethods()
             CreatePadding(dropdownFrame, UDim.new(0, 4))
             
             -- Create main dropdown button
+local content = Instance.new("Frame")
+content.Name = (config.Name or "Dropdown") .. "Content"
+content.Size = UDim2.new(1, 0, 0, 0)
+content.AutomaticSize = Enum.AutomaticSize.Y
+content.BackgroundColor3 = Theme.Secondary
+content.BackgroundTransparency = 0.5
+content.BorderSizePixel = 0
+content.Visible = false
+content.ClipsDescendants = false
+
+CreateCorner(content, UDim.new(0, 6))
+CreateStroke(content, Theme.BorderLight, 0.5)
+local contentLayout = CreateListLayout(content, Enum.FillDirection.Vertical, UDim.new(0, 2))
+CreatePadding(content, UDim.new(0, 4))
+
+-- 2. Buat tombol setelah content tersedia
 local btn = DropdownComponents.CreateButton("> " .. (config.Name or "Dropdown"), function()
     local isOpen = content.Visible
     if isOpen then
@@ -1384,23 +1400,7 @@ local btn = DropdownComponents.CreateButton("> " .. (config.Name or "Dropdown"),
     end
 end)
 
--- Buat konten dropdown
-local content = Instance.new("Frame")
-content.Name = (config.Name or "Dropdown") .. "Content"
-content.Size = UDim2.new(1, 0, 0, 0)
-content.AutomaticSize = Enum.AutomaticSize.Y
-content.BackgroundColor3 = Theme.Secondary
-content.BackgroundTransparency = 0.5
-content.BorderSizePixel = 0
-content.Visible = false
-content.ClipsDescendants = false
-
-CreateCorner(content, UDim.new(0, 6))
-CreateStroke(content, Theme.BorderLight, 0.5)
-local contentLayout = CreateListLayout(content, Enum.FillDirection.Vertical, UDim.new(0, 2))
-CreatePadding(content, UDim.new(0, 4))
-
--- Susun ke parent sesuai urutan
+-- 3. Parent sesuai urutan UIListLayout
 btn.Parent = dropdownFrame
 content.Parent = dropdownFrame
             
