@@ -551,7 +551,49 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
     
     CreatePadding(dropdown, UDim.new(0, 4))
     
-    for _, item in ipairs(items) do
+    -- Create search box
+    local searchContainer = Instance.new("Frame")
+    searchContainer.Size = UDim2.new(1, -8, 0, 30)
+    searchContainer.BackgroundColor3 = Theme.Background or Color3.new(0.1, 0.1, 0.1)
+    searchContainer.BackgroundTransparency = 0.2
+    searchContainer.BorderSizePixel = 0
+    searchContainer.LayoutOrder = 1
+    searchContainer.Parent = dropdown
+    
+    CreateCorner(searchContainer, UDim.new(0, 4))
+    CreateStroke(searchContainer, Theme.BorderAccent, 1)
+    
+    local searchBox = Instance.new("TextBox")
+    searchBox.Size = UDim2.new(1, -20, 1, -4)
+    searchBox.Position = UDim2.new(0, 10, 0, 2)
+    searchBox.BackgroundTransparency = 1
+    searchBox.Font = Enum.Font.SourceSans
+    searchBox.PlaceholderText = "Search..."
+    searchBox.PlaceholderColor3 = Color3.new(0.6, 0.6, 0.6)
+    searchBox.Text = ""
+    searchBox.TextColor3 = Color3.new(1, 1, 1)
+    searchBox.TextSize = 14
+    searchBox.TextXAlignment = Enum.TextXAlignment.Left
+    searchBox.ClearTextOnFocus = false
+    searchBox.Parent = searchContainer
+    
+    -- Container for dropdown items
+    local itemsContainer = Instance.new("Frame")
+    itemsContainer.Size = UDim2.new(1, 0, 0, 0)
+    itemsContainer.AutomaticSize = Enum.AutomaticSize.Y
+    itemsContainer.BackgroundTransparency = 1
+    itemsContainer.LayoutOrder = 2
+    itemsContainer.Parent = dropdown
+    
+    local itemsLayout = Instance.new("UIListLayout", itemsContainer)
+    itemsLayout.Padding = UDim.new(0, 2)
+    itemsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    
+    -- Store original items and create buttons
+    local originalItems = items
+    local itemButtons = {}
+    
+    local function createItemButton(item)
         local option = DropdownComponents.CreateButton(item, function()
             SafeCall(callback or function() end, item)
             dropdown.Visible = false
@@ -563,13 +605,51 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
                 end
             end
         end)
-        option.Parent = dropdown
+        option.Parent = itemsContainer
+        return option
     end
     
+    -- Create all item buttons initially
+    for i, item in ipairs(originalItems) do
+        local button = createItemButton(item)
+        button.LayoutOrder = i
+        itemButtons[item] = button
+    end
+    
+    -- Search functionality
+    local function filterItems(searchText)
+        searchText = searchText:lower()
+        
+        if searchText == "" then
+            -- Show all items
+            for item, button in pairs(itemButtons) do
+                button.Visible = true
+            end
+        else
+            -- Filter items based on search text
+            for item, button in pairs(itemButtons) do
+                local shouldShow = item:lower():find(searchText, 1, true) ~= nil
+                button.Visible = shouldShow
+            end
+        end
+    end
+    
+    -- Connect search box events
+    searchBox.Changed:Connect(function(property)
+        if property == "Text" then
+            filterItems(searchBox.Text)
+        end
+    end)
+    
+    -- Clear search when dropdown is opened
     parentBtn.MouseButton1Click:Connect(function()
         dropdown.Visible = not dropdown.Visible
         if dropdown.Visible then
+            searchBox.Text = ""
+            filterItems("")
             table.insert(openDropdowns, dropdown)
+            -- Focus on search box when opened
+            searchBox:CaptureFocus()
         else
             -- Remove from open dropdowns
             for i, openDropdown in ipairs(openDropdowns) do
