@@ -550,11 +550,11 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     
     CreatePadding(dropdown, UDim.new(0, 4))
-    
+
     -- Create search box
     local searchContainer = Instance.new("Frame")
     searchContainer.Size = UDim2.new(1, -8, 0, 30)
-    searchContainer.BackgroundColor3 = Theme.Background or Color3.new(0.1, 0.1, 0.1)
+    searchContainer.BackgroundColor3 = Theme.Button or Color3.new(0.1, 0.1, 0.1)
     searchContainer.BackgroundTransparency = 0.2
     searchContainer.BorderSizePixel = 0
     searchContainer.LayoutOrder = 1
@@ -567,15 +567,27 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
     searchBox.Size = UDim2.new(1, -20, 1, -4)
     searchBox.Position = UDim2.new(0, 10, 0, 2)
     searchBox.BackgroundTransparency = 1
-    searchBox.Font = Enum.Font.SourceSans
+    searchBox.Font = Enum.Font.GothamBold
     searchBox.PlaceholderText = "Search..."
     searchBox.PlaceholderColor3 = Color3.new(0.6, 0.6, 0.6)
     searchBox.Text = ""
-    searchBox.TextColor3 = Color3.new(1, 1, 1)
-    searchBox.TextSize = 14
+    searchBox.TextColor3 = Theme.Text
+    searchBox.TextSize = 11
     searchBox.TextXAlignment = Enum.TextXAlignment.Left
     searchBox.ClearTextOnFocus = false
     searchBox.Parent = searchContainer
+    
+    -- Add search icon
+    local searchIcon = Instance.new("TextLabel")
+    searchIcon.Size = UDim2.new(0, 16, 0, 16)
+    searchIcon.Position = UDim2.new(1, -20, 0.5, -8)
+    searchIcon.BackgroundTransparency = 1
+    searchIcon.Text = "🔍"
+    searchIcon.TextColor3 = Color3.new(0.6, 0.6, 0.6)
+    searchIcon.TextSize = 12
+    searchIcon.TextXAlignment = Enum.TextXAlignment.Center
+    searchIcon.TextYAlignment = Enum.TextYAlignment.Center
+    searchIcon.Parent = searchContainer
     
     -- Container for dropdown items
     local itemsContainer = Instance.new("Frame")
@@ -593,6 +605,51 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
     local originalItems = items
     local itemButtons = {}
     
+    -- Function to create nested dropdown button (like "Select Options" with dropdown arrow)
+    local function createNestedDropdownButton(text, nestedItems, nestedCallback)
+        local nestedBtn = Instance.new("TextButton")
+        nestedBtn.Text = text
+        nestedBtn.Size = UDim2.new(1, 0, 0, 28)
+        nestedBtn.BackgroundColor3 = Theme.Button
+        nestedBtn.BackgroundTransparency = 0.5
+        nestedBtn.BorderSizePixel = 0
+        nestedBtn.Font = Enum.Font.GothamBold
+        nestedBtn.TextSize = 11
+        nestedBtn.TextColor3 = Theme.Text
+        nestedBtn.TextXAlignment = Enum.TextXAlignment.Left
+        
+        CreateCorner(nestedBtn, UDim.new(0, 6))
+        CreateStroke(nestedBtn, Theme.Border, 0.5)
+        CreatePadding(nestedBtn, UDim.new(0, 8))
+        
+        -- Add dropdown arrow
+        local arrow = Instance.new("TextLabel")
+        arrow.Size = UDim2.new(0, 16, 1, 0)
+        arrow.Position = UDim2.new(1, -20, 0, 0)
+        arrow.BackgroundTransparency = 1
+        arrow.Text = "▼"
+        arrow.TextColor3 = Theme.Text
+        arrow.TextSize = 10
+        arrow.TextXAlignment = Enum.TextXAlignment.Center
+        arrow.TextYAlignment = Enum.TextYAlignment.Center
+        arrow.Parent = nestedBtn
+        
+        -- Create nested dropdown
+        local nestedDropdown = DropdownComponents.CreateNestedDropdown(nestedBtn, nestedItems, nestedCallback)
+        
+        -- Hover effects
+        nestedBtn.MouseEnter:Connect(function()
+            CreateTween(nestedBtn, {BackgroundColor3 = Theme.ButtonHover, BackgroundTransparency = 0.3}):Play()
+        end)
+        
+        nestedBtn.MouseLeave:Connect(function()
+            CreateTween(nestedBtn, {BackgroundColor3 = Theme.Button, BackgroundTransparency = 0.5}):Play()
+        end)
+        
+        return nestedBtn
+    end
+    
+    -- Function to create regular item button
     local function createItemButton(item)
         local option = DropdownComponents.CreateButton(item, function()
             SafeCall(callback or function() end, item)
@@ -609,11 +666,20 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
         return option
     end
     
-    -- Create all item buttons initially
+    -- Create buttons based on item type
     for i, item in ipairs(originalItems) do
-        local button = createItemButton(item)
+        local button
+        
+        -- Check if item is a nested dropdown (table with text and items)
+        if type(item) == "table" and item.text and item.items then
+            button = createNestedDropdownButton(item.text, item.items, item.callback or callback)
+        else
+            button = createItemButton(item)
+        end
+        
         button.LayoutOrder = i
-        itemButtons[item] = button
+        button.Parent = itemsContainer
+        itemButtons[type(item) == "table" and item.text or item] = button
     end
     
     -- Search functionality
@@ -628,7 +694,7 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
         else
             -- Filter items based on search text
             for item, button in pairs(itemButtons) do
-                local shouldShow = item:lower():find(searchText, 1, true) ~= nil
+                local shouldShow = tostring(item):lower():find(searchText, 1, true) ~= nil
                 button.Visible = shouldShow
             end
         end
@@ -641,7 +707,7 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
         end
     end)
     
-    -- Clear search when dropdown is opened
+    -- Handle dropdown visibility
     parentBtn.MouseButton1Click:Connect(function()
         dropdown.Visible = not dropdown.Visible
         if dropdown.Visible then
@@ -663,6 +729,7 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
     
     return dropdown
 end
+
 
 -- Window Class
 local Window = {}
