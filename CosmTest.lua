@@ -884,19 +884,30 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback, dro
     end
     
     -- Create buttons based on item type
-    for i, item in ipairs(originalItems) do
-        local button
-        
-        -- Check if item is a nested dropdown (table with text and items)
-        if type(item) == "table" and item.text and item.items then
-            button = createNestedDropdownButton(item.text, item.items, item.callback or callback, item.id or tostring(i))
-        else
-            button = createItemButton(item)
-        end
-        
-        button.LayoutOrder = i
-        button.Parent = itemsContainer
-        itemButtons[type(item) == "table" and item.text or item] = button
+for i, item in ipairs(originalItems) do
+    local button
+
+    if type(item) == "table" and item.text and item.items then
+        -- ✅ NESTED → pakai multi-select button builder
+        button = createNestedDropdownButton(item.text, item.items, item.callback or callback, item.id or tostring(i))
+    else
+        -- ✅ ITEM BIASA (single-select default)
+        button = DropdownComponents.CreateButton(tostring(item), function()
+            SafeCall(callback or function() end, item)
+            dropdown.Visible = false
+            -- Remove from open dropdowns
+            for i, openDropdown in ipairs(openDropdowns) do
+                if openDropdown == dropdown then
+                    table.remove(openDropdowns, i)
+                    break
+                end
+            end
+        end)
+    end
+
+    button.LayoutOrder = i
+    button.Parent = itemsContainer
+    itemButtons[type(item) == "table" and item.text or item] = button
     end
     
     -- Search functionality
