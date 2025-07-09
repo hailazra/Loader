@@ -528,18 +528,23 @@ function DropdownComponents.CreateSlider(min, max, callback)
     return sliderFrame, updateSlider
 end
 
-function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
+-- Improved Nested Dropdown with all requested features
+local openDropdowns = {}  -- Track open dropdowns
+local openNestedDropdowns = {}  -- Track open nested dropdowns per section
+local selectedItems = {}  -- Store multi-selected items per dropdown
+
+function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback, dropdownId)
     local dropdown = Instance.new("Frame")
-    dropdown.Size = UDim2.new(0, 100, 0, 0)
+    dropdown.Size = UDim2.new(0, 280, 0, 0)  -- Fixed width, adjustable here
     dropdown.AutomaticSize = Enum.AutomaticSize.Y
-    dropdown.Position = UDim2.new(0, parentBtn.AbsoluteSize.X - 100, 0, 0)
+    dropdown.Position = UDim2.new(0, parentBtn.AbsoluteSize.X - 280, 0, 0)
     dropdown.BackgroundColor3 = Theme.Surface
     dropdown.BackgroundTransparency = 0.3
     dropdown.BorderSizePixel = 0
     dropdown.Visible = false
     dropdown.Parent = parentBtn
     dropdown.ClipsDescendants = false
-    dropdown.ZIndex = 200
+    dropdown.ZIndex = 300  -- Higher z-index to prevent overlap
     
     CreateCorner(dropdown, UDim.new(0, 6))
     CreateStroke(dropdown, Theme.BorderAccent, 1)
@@ -550,6 +555,11 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     
     CreatePadding(dropdown, UDim.new(0, 4))
+
+    -- Initialize selected items for this dropdown
+    if not selectedItems[dropdownId] then
+        selectedItems[dropdownId] = {}
+    end
 
     -- Create search box
     local searchContainer = Instance.new("Frame")
@@ -605,8 +615,135 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
     local originalItems = items
     local itemButtons = {}
     
+    -- Function to close all nested dropdowns except the current one
+    local function closeOtherNestedDropdowns(currentDropdownId, currentNestedId)
+        if openNestedDropdowns[currentDropdownId] then
+            for nestedId, nestedDropdown in pairs(openNestedDropdowns[currentDropdownId]) do
+                if nestedId ~= currentNestedId then
+                    nestedDropdown.Visible = false
+                end
+            end
+        end
+    end
+    
+    -- Function to create multi-select item button
+    local function createMultiSelectButton(item, nestedDropdownId)
+        local button = Instance.new("TextButton")
+        button.Text = item
+        button.Size = UDim2.new(1, 0, 0, 28)
+        button.BackgroundColor3 = Theme.Button
+        button.BackgroundTransparency = 0.5
+        button.BorderSizePixel = 0
+        button.Font = Enum.Font.GothamBold
+        button.TextSize = 11
+        button.TextColor3 = Theme.Text
+        button.TextXAlignment = Enum.TextXAlignment.Left
+        
+        CreateCorner(button, UDim.new(0, 6))
+        CreateStroke(button, Theme.Border, 0.5)
+        CreatePadding(button, UDim.new(0, 8))
+        
+        -- Selection indicator
+        local selectionIndicator = Instance.new("Frame")
+        selectionIndicator.Size = UDim2.new(0, 6, 0, 6)
+        selectionIndicator.Position = UDim2.new(1, -12, 0.5, -3)
+        selectionIndicator.BackgroundColor3 = Color3.new(0, 1, 0.5)  -- Green indicator
+        selectionIndicator.BorderSizePixel = 0
+        selectionIndicator.Visible = false
+        selectionIndicator.Parent = button
+        
+        CreateCorner(selectionIndicator, UDim.new(0.5, 0))
+        
+        -- Function to update selection state
+        local function updateSelectionState()
+            local isSelected = false
+            if selectedItems[dropdownId] and selectedItems[dropdownId][nestedDropdownId] then
+                for _, selectedItem in ipairs(selectedItems[dropdownId][nestedDropdownId]) do
+                    if selectedItem == item then
+                        isSelected = true
+                        break
+                    end
+                end
+            end
+            
+            -- Update visual state
+            if isSelected then
+                button.BackgroundColor3 = Theme.Primary or Color3.new(0.2, 0.6, 1)
+                button.BackgroundTransparency = 0.2
+                button.TextColor3 = Color3.new(1, 1, 1)
+                selectionIndicator.Visible = true
+            else
+                button.BackgroundColor3 = Theme.Button
+                button.BackgroundTransparency = 0.5
+                button.TextColor3 = Theme.Text
+                selectionIndicator.Visible = false
+            end
+        end
+        
+        -- Handle multi-select
+        button.MouseButton1Click:Connect(function()
+            if not selectedItems[dropdownId][nestedDropdownId] then
+                selectedItems[dropdownId][nestedDropdownId] = {}
+            end
+            
+            local isSelected = false
+            local selectedIndex = -1
+            
+            -- Check if item is already selected
+            for i, selectedItem in ipairs(selectedItems[dropdownId][nestedDropdownId]) do
+                if selectedItem == item then
+                    isSelected = true
+                    selectedIndex = i
+                    break
+                end
+            end
+            
+            -- Toggle selection
+            if isSelected then
+                -- Remove from selection
+                table.remove(selectedItems[dropdownId][nestedDropdownId], selectedIndex)
+            else
+                -- Add to selection
+                table.insert(selectedItems[dropdownId][nestedDropdownId], item)
+            end
+            
+            updateSelectionState()
+            
+            -- Call callback with current selection
+            if callback then
+                SafeCall(callback, selectedItems[dropdownId][nestedDropdownId], item, not isSelected)
+            end
+        end)
+        
+        -- Hover effects
+        button.MouseEnter:Connect(function()
+            local isSelected = false
+            if selectedItems[dropdownId] and selectedItems[dropdownId][nestedDropdownId] then
+                for _, selectedItem in ipairs(selectedItems[dropdownId][nestedDropdownId]) do
+                    if selectedItem == item then
+                        isSelected = true
+                        break
+                    end
+                end
+            end
+            
+            if not isSelected then
+                CreateTween(button, {BackgroundColor3 = Theme.ButtonHover, BackgroundTransparency = 0.3}):Play()
+            end
+        end)
+        
+        button.MouseLeave:Connect(function()
+            updateSelectionState()
+        end)
+        
+        -- Initialize state
+        updateSelectionState()
+        
+        return button
+    end
+    
     -- Function to create nested dropdown button (like "Select Options" with dropdown arrow)
-    local function createNestedDropdownButton(text, nestedItems, nestedCallback)
+    local function createNestedDropdownButton(text, nestedItems, nestedCallback, nestedId)
         local nestedBtn = Instance.new("TextButton")
         nestedBtn.Text = text
         nestedBtn.Size = UDim2.new(1, 0, 0, 28)
@@ -634,8 +771,88 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
         arrow.TextYAlignment = Enum.TextYAlignment.Center
         arrow.Parent = nestedBtn
         
-        -- Create nested dropdown
-        local nestedDropdown = DropdownComponents.CreateNestedDropdown(nestedBtn, nestedItems, nestedCallback)
+        -- Create nested dropdown container
+        local nestedDropdown = Instance.new("Frame")
+        nestedDropdown.Size = UDim2.new(0, 320, 0, 0)  -- Width adjustable here
+        nestedDropdown.AutomaticSize = Enum.AutomaticSize.Y
+        nestedDropdown.Position = UDim2.new(1, 8, 0, 0)  -- Position to the right
+        nestedDropdown.BackgroundColor3 = Theme.Surface
+        nestedDropdown.BackgroundTransparency = 0.2
+        nestedDropdown.BorderSizePixel = 0
+        nestedDropdown.Visible = false
+        nestedDropdown.Parent = nestedBtn
+        nestedDropdown.ClipsDescendants = false
+        nestedDropdown.ZIndex = 350  -- Even higher z-index
+        
+        -- Max height for nested dropdown
+        local maxHeight = 400  -- Adjustable here
+        if nestedDropdown.AbsoluteSize.Y > maxHeight then
+            nestedDropdown.Size = UDim2.new(0, 320, 0, maxHeight)
+            nestedDropdown.AutomaticSize = Enum.AutomaticSize.None
+        end
+        
+        CreateCorner(nestedDropdown, UDim.new(0, 6))
+        CreateStroke(nestedDropdown, Theme.BorderAccent, 1)
+        CreateDropShadow(nestedDropdown, Vector2.new(0, 2), 8, 0.3)
+        
+        -- Nested dropdown layout
+        local nestedLayout = Instance.new("UIListLayout", nestedDropdown)
+        nestedLayout.Padding = UDim.new(0, 2)
+        nestedLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        
+        CreatePadding(nestedDropdown, UDim.new(0, 4))
+        
+        -- Create scroll frame for nested items
+        local scrollFrame = Instance.new("ScrollingFrame")
+        scrollFrame.Size = UDim2.new(1, 0, 0, 0)
+        scrollFrame.AutomaticSize = Enum.AutomaticSize.Y
+        scrollFrame.BackgroundTransparency = 1
+        scrollFrame.BorderSizePixel = 0
+        scrollFrame.ScrollBarThickness = 4
+        scrollFrame.Parent = nestedDropdown
+        
+        local scrollLayout = Instance.new("UIListLayout", scrollFrame)
+        scrollLayout.Padding = UDim.new(0, 2)
+        scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        
+        -- Create multi-select buttons for nested items
+        for i, nestedItem in ipairs(nestedItems) do
+            local multiSelectBtn = createMultiSelectButton(nestedItem, nestedId)
+            multiSelectBtn.LayoutOrder = i
+            multiSelectBtn.Parent = scrollFrame
+        end
+        
+        -- Initialize selected items array for this nested dropdown
+        if not selectedItems[dropdownId] then
+            selectedItems[dropdownId] = {}
+        end
+        if not selectedItems[dropdownId][nestedId] then
+            selectedItems[dropdownId][nestedId] = {}
+        end
+        
+        -- Track this nested dropdown
+        if not openNestedDropdowns[dropdownId] then
+            openNestedDropdowns[dropdownId] = {}
+        end
+        openNestedDropdowns[dropdownId][nestedId] = nestedDropdown
+        
+        -- Handle nested dropdown toggle
+        nestedBtn.MouseButton1Click:Connect(function()
+            local isVisible = nestedDropdown.Visible
+            
+            -- Close other nested dropdowns in the same section
+            closeOtherNestedDropdowns(dropdownId, nestedId)
+            
+            -- Toggle current nested dropdown
+            nestedDropdown.Visible = not isVisible
+            
+            -- Update arrow rotation
+            if nestedDropdown.Visible then
+                CreateTween(arrow, {Rotation = 180}):Play()
+            else
+                CreateTween(arrow, {Rotation = 0}):Play()
+            end
+        end)
         
         -- Hover effects
         nestedBtn.MouseEnter:Connect(function()
@@ -672,7 +889,7 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
         
         -- Check if item is a nested dropdown (table with text and items)
         if type(item) == "table" and item.text and item.items then
-            button = createNestedDropdownButton(item.text, item.items, item.callback or callback)
+            button = createNestedDropdownButton(item.text, item.items, item.callback or callback, item.id or tostring(i))
         else
             button = createItemButton(item)
         end
@@ -707,6 +924,15 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
         end
     end)
     
+    -- Function to close all nested dropdowns in this section
+    local function closeAllNestedDropdowns()
+        if openNestedDropdowns[dropdownId] then
+            for nestedId, nestedDropdown in pairs(openNestedDropdowns[dropdownId]) do
+                nestedDropdown.Visible = false
+            end
+        end
+    end
+    
     -- Handle dropdown visibility
     parentBtn.MouseButton1Click:Connect(function()
         dropdown.Visible = not dropdown.Visible
@@ -717,6 +943,8 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
             -- Focus on search box when opened
             searchBox:CaptureFocus()
         else
+            -- Close all nested dropdowns when main dropdown closes
+            closeAllNestedDropdowns()
             -- Remove from open dropdowns
             for i, openDropdown in ipairs(openDropdowns) do
                 if openDropdown == dropdown then
@@ -726,10 +954,32 @@ function DropdownComponents.CreateNestedDropdown(parentBtn, items, callback)
             end
         end
     end)
-    
+                
     return dropdown
 end
 
+-- Function to get selected items for a specific dropdown
+function DropdownComponents.GetSelectedItems(dropdownId, nestedId)
+    if selectedItems[dropdownId] and selectedItems[dropdownId][nestedId] then
+        return selectedItems[dropdownId][nestedId]
+    end
+    return {}
+end
+
+-- Function to clear selected items for a specific dropdown
+function DropdownComponents.ClearSelectedItems(dropdownId, nestedId)
+    if selectedItems[dropdownId] and selectedItems[dropdownId][nestedId] then
+        selectedItems[dropdownId][nestedId] = {}
+    end
+end
+
+-- Function to set selected items for a specific dropdown
+function DropdownComponents.SetSelectedItems(dropdownId, nestedId, items)
+    if not selectedItems[dropdownId] then
+        selectedItems[dropdownId] = {}
+    end
+    selectedItems[dropdownId][nestedId] = items or {}
+end
 
 -- Window Class
 local Window = {}
