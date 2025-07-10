@@ -788,8 +788,6 @@ function DropdownComponents.SetSelectedItems(dropdownId, items)
 	selectedItems[dropdownId] = items or {}
 end
 
-return DropdownComponents
-
 -- Window Class
 local Window = {}
 Window.__index = Window
